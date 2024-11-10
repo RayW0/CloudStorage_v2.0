@@ -3,6 +3,7 @@ import { lazy } from 'react';
 // project import
 import Loadable from 'components/Loadable';
 import Dashboard from 'layout/Dashboard';
+import Trash from 'pages/files/Trash';
 
 // render - login
 const MyFiles = Loadable(lazy(() => import('pages/files/myfiles')));
@@ -22,6 +23,10 @@ const FilesRoutes = {
       path: '/folder',
       element: <FolderView />
     },
+    {
+      path: '/trash',
+      element: <Trash />
+    }
   ]
 };
 

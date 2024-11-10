@@ -1,10 +1,11 @@
 // assets
-import {FolderOutlined, FolderAddOutlined} from '@ant-design/icons';
-
+import { FolderOutlined, FolderAddOutlined } from '@ant-design/icons';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 // icons
 const icons = {
-    FolderAddOutlined,
-    FolderOutlined
+  FolderAddOutlined,
+  FolderOutlined,
+  DeleteOutlineIcon
 };
 
 // ==============================|| MENU ITEMS - DASHBOARD ||============================== //
@@ -22,6 +23,14 @@ const files = {
       icon: icons.FolderOutlined,
       breadcrumbs: true
     },
+    {
+      id: 'trash',
+      title: 'Корзина',
+      type: 'item',
+      url: '/trash',
+      icon: icons.DeleteOutlineIcon,
+      breadcrumbs: true
+    }
   ]
 };
 

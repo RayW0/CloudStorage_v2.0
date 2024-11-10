@@ -1,24 +1,17 @@
 // src/pages/AdminPanel.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Button,
-  Typography,
-  Stack,
-  Box,
-} from '@mui/material';
-import {
-  CheckCircle,
-} from '@mui/icons-material';
+import { Button, Typography, Stack, Box } from '@mui/material';
+import { CheckCircle } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import MainCard from 'components/MainCard';
-import UserSelect from 'components/UserSelect';
-import RoleSelect from 'components/RoleSelect';
-import GroupSelect from 'components/GroupSelect';
-import CreateGroupForm from 'components/CreateGroupForm';
-import GroupsList from 'components/GroupsList';
-import UserActions from 'components/UserActions';
-import ConfirmationDialog from 'components/ConfirmationDialog';
+import UserSelect from 'components/adminPanel/UserSelect';
+import RoleSelect from 'components/adminPanel/RoleSelect';
+import GroupSelect from 'components/adminPanel/GroupSelect';
+import CreateGroupForm from 'components/adminPanel/CreateGroupForm';
+import GroupsList from 'components/adminPanel/GroupsList';
+import UserActions from 'components/adminPanel/UserActions';
+import ConfirmationDialog from 'components/adminPanel/ConfirmationDialog';
 import useAdminPanel from 'hooks/useAdminPanel';
 
 export default function AdminPanel() {
@@ -42,7 +35,7 @@ export default function AdminPanel() {
     handleDeleteGroup,
     handleDeleteUser,
     handleBlockUser,
-    handleUnblockUser,
+    handleUnblockUser
   } = useAdminPanel();
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -64,19 +57,10 @@ export default function AdminPanel() {
 
       <Stack spacing={3} mt={2}>
         {/* Селектор Пользователя */}
-        <UserSelect
-          uid={uid}
-          setUid={setUid}
-          users={users}
-          disabled={isLoading}
-        />
+        <UserSelect uid={uid} setUid={setUid} users={users} disabled={isLoading} />
 
         {/* Селектор Роли */}
-        <RoleSelect
-          role={role}
-          setRole={setRole}
-          disabled={isLoading || !uid}
-        />
+        <RoleSelect role={role} setRole={setRole} disabled={isLoading || !uid} />
 
         {/* Кнопка Назначения Роли */}
         <Button
@@ -91,12 +75,7 @@ export default function AdminPanel() {
         </Button>
 
         {/* Селектор Группы */}
-        <GroupSelect
-          groupId={groupId}
-          setGroupId={setGroupId}
-          groups={groups}
-          disabled={isLoading || !uid}
-        />
+        <GroupSelect groupId={groupId} setGroupId={setGroupId} groups={groups} disabled={isLoading || !uid} />
 
         {/* Кнопка Назначения Группы */}
         <Button
@@ -111,17 +90,10 @@ export default function AdminPanel() {
         </Button>
 
         {/* Поле для создания новой группы */}
-        <CreateGroupForm
-          newGroupName={newGroupName}
-          setNewGroupName={setNewGroupName}
-          handleCreateGroup={handleCreateGroup}
-        />
+        <CreateGroupForm newGroupName={newGroupName} setNewGroupName={setNewGroupName} handleCreateGroup={handleCreateGroup} />
 
         {/* Отображение списка групп с возможностью удаления */}
-        <GroupsList
-          groups={groups}
-          handleDeleteGroup={handleDeleteGroup}
-        />
+        <GroupsList groups={groups} handleDeleteGroup={handleDeleteGroup} />
 
         {/* Кнопки управления пользователями */}
         <UserActions
@@ -129,7 +101,7 @@ export default function AdminPanel() {
           handleDeleteUser={() => setDeleteDialogOpen(true)}
           handleBlockUser={() => setBlockDialogOpen(true)}
           handleUnblockUser={() => setUnblockDialogOpen(true)}
-          isBlocked={users.find(user => user.uid === uid)?.isBlocked}
+          isBlocked={users.find((user) => user.uid === uid)?.isBlocked}
         />
       </Stack>
 

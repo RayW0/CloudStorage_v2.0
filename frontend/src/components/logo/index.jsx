@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import { ButtonBase } from '@mui/material';
 import Stack from '@mui/material/Stack';
 
-import { CloudTwoTone } from '@ant-design/icons';
+import IconLogo from './icon';
 
 // project import
 import Logo from './LogoMain';
@@ -17,8 +17,7 @@ const LogoSection = ({ sx, to }) => {
   return (
     <ButtonBase disableRipple component={Link} to={!to ? config.defaultPath : to} sx={sx}>
       <Stack direction="row" spacing={1} alignItems="center">
-      <CloudTwoTone style={{ fontSize: '20px'}} />
-      <Logo />
+        <Logo />
       </Stack>
     </ButtonBase>
   );

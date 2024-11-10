@@ -24,7 +24,7 @@ const useFiles = (currentDirectory) => {
         setFiles(userFiles);
         setIsLoading(false);
       } else {
-        console.warn("Пользователь не авторизован");
+        console.warn('Пользователь не авторизован');
         setFiles([]);
       }
     });
@@ -32,29 +32,36 @@ const useFiles = (currentDirectory) => {
     return () => unsubscribe();
   }, [currentDirectory]);
 
-  const handleDeleteFiles = async (selectedFiles) => {
+  const handleDeleteFiles = async (selectedFiles, currentUser) => {
     if (selectedFiles.length === 0) {
-      toast.warn("Не выбрано ни одного файла для удаления");
+      toast.warn('Не выбрано ни одного файла для удаления');
       return;
     }
     setIsLoading(true);
     try {
-      await Promise.all(selectedFiles.map(async (file) => {
-        if (file.type === 'folder') {
-          // Проверяем, пустая ли папка
-          const folderContents = await getUserFiles(currentUser.uid, `${file.directory}${file.name}/`);
-          if (folderContents.length > 0) {
-            toast.error(`Папка "${file.name}" не пустая`);
-            return;
+      await Promise.all(
+        selectedFiles.map(async (file) => {
+          if (file.type === 'folder') {
+            // Проверка, пустая ли папка
+            const folderContents = await getUserFiles(currentUser.uid, `${file.directory}${file.name}/`);
+            if (folderContents.length > 0) {
+              toast.error(`Папка "${file.name}" не пустая`);
+              return;
+            }
           }
-        }
-        await deleteFile(file);
-        setFiles((prevFiles) => prevFiles.filter((f) => f.id !== file.id));
-      }));
-      toast.success("Файлы удалены");
+          // Обновление документа файла, пометка как удаленного
+          const fileRef = doc(db, 'files', file.id);
+          await updateDoc(fileRef, {
+            isDeleted: true,
+            deletedAt: Date.now()
+          });
+          setFiles((prevFiles) => prevFiles.filter((f) => f.id !== file.id));
+        })
+      );
+      toast.success('Файлы перемещены в корзину');
     } catch (error) {
-      console.error("Ошибка при удалении выбранных файлов:", error);
-      toast.error("Ошибка при удалении файлов");
+      console.error('Ошибка при удалении выбранных файлов:', error);
+      toast.error('Ошибка при удалении файлов');
     } finally {
       setIsLoading(false);
     }
@@ -62,7 +69,7 @@ const useFiles = (currentDirectory) => {
 
   const handleUploadFile = async (file, currentDirectory) => {
     if (!currentUser) {
-      toast.error("Пользователь не авторизован. Пожалуйста, войдите в систему.");
+      toast.error('Пользователь не авторизован. Пожалуйста, войдите в систему.');
       return;
     }
 
@@ -77,17 +84,17 @@ const useFiles = (currentDirectory) => {
         downloadURL,
         path: filePath,
         directory: currentDirectory,
-        type: 'file',
+        type: 'file'
       };
 
-      const docRef = await addDoc(collection(db, "files"), newFile);
+      const docRef = await addDoc(collection(db, 'files'), newFile);
       const fileWithId = { id: docRef.id, ...newFile };
 
       setFiles((prevFiles) => [...prevFiles, fileWithId]);
-      toast.success("Файл успешно загружен!");
+      toast.success('Файл успешно загружен!');
     } catch (error) {
-      console.error("Ошибка при загрузке файла:", error);
-      toast.error("Ошибка при загрузке файла!");
+      console.error('Ошибка при загрузке файла:', error);
+      toast.error('Ошибка при загрузке файла!');
     } finally {
       setIsLoading(false);
     }
@@ -104,29 +111,29 @@ const useFiles = (currentDirectory) => {
       link.click();
       document.body.removeChild(link);
     } catch (error) {
-      console.error("Ошибка при скачивании файла:", error);
-      toast.error("Ошибка при скачивании файла");
+      console.error('Ошибка при скачивании файла:', error);
+      toast.error('Ошибка при скачивании файла');
     }
   };
 
   const handleCopyLink = async (file) => {
     try {
       await navigator.clipboard.writeText(file.downloadURL);
-      toast.success("Ссылка скопирована в буфер обмена");
+      toast.success('Ссылка скопирована в буфер обмена');
     } catch (err) {
-      console.error("Ошибка при копировании ссылки:", err);
-      toast.error("Ошибка при копировании ссылки");
+      console.error('Ошибка при копировании ссылки:', err);
+      toast.error('Ошибка при копировании ссылки');
     }
   };
 
   const handleCreateFolder = async (folderName, currentDirectory) => {
     if (!currentUser) {
-      toast.error("Пользователь не авторизован. Пожалуйста, войдите в систему.");
+      toast.error('Пользователь не авторизован. Пожалуйста, войдите в систему.');
       return;
     }
 
     // Проверка на существование папки с таким же именем в текущей директории
-    const existingFolders = files.filter(f => f.type === 'folder' && f.name === folderName);
+    const existingFolders = files.filter((f) => f.type === 'folder' && f.name === folderName);
     if (existingFolders.length > 0) {
       toast.error(`Папка "${folderName}" уже существует`);
       return;
@@ -141,14 +148,14 @@ const useFiles = (currentDirectory) => {
         last_modified: Date.now()
       };
 
-      const docRef = await addDoc(collection(db, "files"), newFolder);
+      const docRef = await addDoc(collection(db, 'files'), newFolder);
       const folderWithId = { id: docRef.id, ...newFolder };
 
       setFiles((prevFiles) => [...prevFiles, folderWithId]);
       toast.success(`Папка "${folderName}" успешно создана`);
     } catch (error) {
-      console.error("Ошибка при создании папки:", error);
-      toast.error("Ошибка при создании папки");
+      console.error('Ошибка при создании папки:', error);
+      toast.error('Ошибка при создании папки');
     }
   };
 

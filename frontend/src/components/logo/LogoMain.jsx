@@ -7,14 +7,7 @@ const Logo = () => {
 
   return (
     <svg width="118" height="35" viewBox="0 0 118 35" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <text
-        x="50%" y="50%"
-        textAnchor="middle"
-        dominantBaseline="middle"
-        fontSize="18"
-        fontWeight="bold"
-        fill={theme.palette.primary.dark}
-      >
+      <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" fontSize="18" fontWeight="bold" fill={theme.palette.primary.dark}>
         SecureCloud
       </text>
       <defs>

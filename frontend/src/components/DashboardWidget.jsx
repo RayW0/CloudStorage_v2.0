@@ -3,25 +3,8 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { useNavigate } from 'react-router-dom';
-import {
-  CardContent,
-  Typography,
-  Stack,
-  Tooltip,
-  LinearProgress,
-  Grow,
-  useTheme,
-  Box,
-  Badge,
-} from '@mui/material';
-import {
-  FileOutlined,
-  ArrowUpOutlined,
-  ArrowDownOutlined,
-  UserOutlined,
-  DollarOutlined,
-  InfoOutlined,
-} from '@ant-design/icons';
+import { CardContent, Typography, Stack, Tooltip, LinearProgress, Grow, useTheme, Box, Badge } from '@mui/material';
+import { FileOutlined, ArrowUpOutlined, ArrowDownOutlined, UserOutlined, DollarOutlined, InfoOutlined } from '@ant-design/icons';
 import MainCard from './MainCard'; // Предполагается, что MainCard настроен для использования с MUI
 import { styled } from '@mui/system';
 
@@ -33,8 +16,8 @@ const StyledBadge = styled(Badge)(({ theme }) => ({
     right: -3,
     top: 13,
     border: `2px solid ${theme.palette.background.paper}`,
-    padding: '0 4px',
-  },
+    padding: '0 4px'
+  }
 }));
 
 /**
@@ -48,26 +31,14 @@ const StyledBadge = styled(Badge)(({ theme }) => ({
  * @param {string} extraInfo - Дополнительная информация для отображения
  * @param {number} progress - Значение прогресса (от 0 до 100)
  */
-export default function DashboardWidget({
-  title,
-  value,
-  icon,
-  change,
-  link,
-  extraInfo,
-  progress,
-}) {
+export default function DashboardWidget({ title, value, icon, change, link, extraInfo, progress }) {
   const navigate = useNavigate();
   const theme = useTheme();
 
   const isPositive = change > 0;
   const changeColor = isPositive ? theme.palette.success.main : theme.palette.error.main;
   const valueColor =
-    typeof value === 'number'
-      ? value >= 0
-        ? theme.palette.success.main
-        : theme.palette.error.main
-      : theme.palette.text.primary;
+    typeof value === 'number' ? (value >= 0 ? theme.palette.success.main : theme.palette.error.main) : theme.palette.text.primary;
 
   const iconColor = theme.palette.mode === 'dark' ? '#fff' : '#1890ff';
 
@@ -82,9 +53,9 @@ export default function DashboardWidget({
           transition: 'transform 0.3s, box-shadow 0.3s',
           '&:hover': {
             transform: 'scale(1.05)',
-            boxShadow: theme.shadows[6],
+            boxShadow: theme.shadows[6]
           },
-          position: 'relative',
+          position: 'relative'
         }}
         onClick={() => navigate(link)}
         elevation={3}
@@ -105,17 +76,13 @@ export default function DashboardWidget({
                 color: iconColor,
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
+                justifyContent: 'center'
               }}
             >
               {icon || <FileOutlined />}
             </Box>
             <Stack spacing={1} flex={1}>
-              <Typography
-                variant="subtitle1"
-                color="text.secondary"
-                sx={{ fontWeight: 'bold' }}
-              >
+              <Typography variant="subtitle1" color="text.secondary" sx={{ fontWeight: 'bold' }}>
                 {title}
                 <Tooltip title="Информация о виджете">
                   <InfoOutlined style={{ marginLeft: 4, fontSize: '16px', cursor: 'pointer' }} />
@@ -128,11 +95,7 @@ export default function DashboardWidget({
               </Tooltip>
               {typeof change === 'number' && (
                 <Stack direction="row" alignItems="center" spacing={0.5}>
-                  {isPositive ? (
-                    <ArrowUpOutlined style={{ color: changeColor }} />
-                  ) : (
-                    <ArrowDownOutlined style={{ color: changeColor }} />
-                  )}
+                  {isPositive ? <ArrowUpOutlined style={{ color: changeColor }} /> : <ArrowDownOutlined style={{ color: changeColor }} />}
                   <Typography variant="body2" sx={{ color: changeColor, fontWeight: 'medium' }}>
                     {Math.abs(change)}%
                   </Typography>
@@ -151,8 +114,8 @@ export default function DashboardWidget({
                       borderRadius: 5,
                       backgroundColor: theme.palette.grey[300],
                       '& .MuiLinearProgress-bar': {
-                        backgroundColor: theme.palette.primary.main,
-                      },
+                        backgroundColor: theme.palette.primary.main
+                      }
                     }}
                   />
                   <Typography variant="caption" color="text.secondary">
@@ -180,7 +143,7 @@ DashboardWidget.propTypes = {
   change: PropTypes.number, // процент изменения
   link: PropTypes.string, // путь для навигации
   extraInfo: PropTypes.string, // дополнительная информация
-  progress: PropTypes.number, // значение прогресса (0-100)
+  progress: PropTypes.number // значение прогресса (0-100)
 };
 
 DashboardWidget.defaultProps = {
@@ -188,5 +151,5 @@ DashboardWidget.defaultProps = {
   change: 0,
   link: '/',
   extraInfo: '',
-  progress: undefined,
+  progress: undefined
 };

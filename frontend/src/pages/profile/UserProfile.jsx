@@ -1,17 +1,9 @@
 // src/pages/UserProfile.jsx
 import React, { useState, useEffect } from 'react';
-import {
-  Typography,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
-  Button,
-} from '@mui/material';
+import { Typography, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button } from '@mui/material';
 import MainCard from 'components/MainCard';
 import ProfileForm from 'components/ProfileForm';
-import LoadingOverlay from 'components/LoadingOverlay';
+import LoadingOverlay from 'components/@extended/LoadingOverlay';
 import useUserProfile from 'hooks/useUserProfile';
 import uploadProfilePicture from 'utils/uploadProfilePicture';
 import { getAuth, updateProfile } from 'firebase/auth';
@@ -33,7 +25,7 @@ export default function UserProfile() {
     isBlocked,
     userGroupId,
     userGroupName,
-    isLoading,
+    isLoading
   } = useUserProfile();
 
   const [editing, setEditing] = useState(false);
@@ -43,7 +35,7 @@ export default function UserProfile() {
     userphone: '',
     position: '',
     userbio: '',
-    profile_pic: '',
+    profile_pic: ''
   });
   const [uploading, setUploading] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
@@ -59,7 +51,7 @@ export default function UserProfile() {
         userphone: userPhone,
         position: userPosition,
         userbio: userBio,
-        profile_pic: profilePic,
+        profile_pic: profilePic
       });
     }
   }, [userName, userEmail, userPhone, userPosition, userBio, profilePic, editing]);
@@ -79,7 +71,7 @@ export default function UserProfile() {
       userphone: userPhone,
       position: userPosition,
       userbio: userBio,
-      profile_pic: profilePic,
+      profile_pic: profilePic
     });
   };
 
@@ -89,7 +81,7 @@ export default function UserProfile() {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: value
     }));
   };
 
@@ -103,7 +95,7 @@ export default function UserProfile() {
         const url = await uploadProfilePicture(currentUser.uid, file);
         setFormData((prev) => ({
           ...prev,
-          profile_pic: url,
+          profile_pic: url
         }));
         toast.success('Изображение успешно загружено!');
       } catch (error) {
@@ -139,7 +131,7 @@ export default function UserProfile() {
         userphone: formData.userphone,
         position: formData.position,
         userbio: formData.userbio,
-        profile_pic: formData.profile_pic,
+        profile_pic: formData.profile_pic
       };
 
       // Если у пользователя есть группа, сохранить группу
@@ -152,7 +144,7 @@ export default function UserProfile() {
       // Обновление Firebase Authentication
       await updateProfile(currentUser, {
         displayName: formData.username,
-        photoURL: formData.profile_pic,
+        photoURL: formData.profile_pic
       });
 
       setEditing(false);
