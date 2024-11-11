@@ -10,6 +10,9 @@ import {
 } from "firebase/auth";
 import { doc, setDoc, updateDoc } from 'firebase/firestore';
 import app, { db } from 'firebaseConfig';
+import { strengthIndicator } from 'utils/password-strength';
+import { strengthColor } from 'utils/password-strength';
+
 
 const useRegister = (navigate) => {
   const auth = getAuth(app);

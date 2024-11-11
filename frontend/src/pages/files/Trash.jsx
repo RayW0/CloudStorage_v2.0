@@ -2,22 +2,16 @@
 
 import React, { useEffect, useState } from 'react';
 import {
-  List,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
-  IconButton,
-  Typography,
-  Stack,
-  Divider,
-  Checkbox,
-  Button,
-  CircularProgress
+  List, ListItem, ListItemText, ListItemSecondaryAction,
+  IconButton, Typography, Stack, Divider, Checkbox, Button, CircularProgress, Box
 } from '@mui/material';
+import RestoreFromTrashOutlinedIcon from '@mui/icons-material/RestoreFromTrashOutlined';
+import DeleteForeverOutlinedIcon from '@mui/icons-material/DeleteForeverOutlined';
+
 import { collection, query, where, getDocs, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from 'firebaseConfig';
 import { toast } from 'react-toastify';
-import MainCard from 'components/MainCard';
+import getFileIcon from 'utils/getFileIcon.jsx';
 
 const Trash = ({ currentUser }) => {
   const [deletedFiles, setDeletedFiles] = useState([]);
@@ -29,52 +23,57 @@ const Trash = ({ currentUser }) => {
       if (!currentUser) return;
       setIsLoading(true);
       try {
-        const q = query(collection(db, 'files'), where('ownerId', '==', currentUser.uid), where('isDeleted', '==', true));
+        const q = query(
+          collection(db, "files"),
+          where("ownerId", "==", currentUser.uid),
+          where("isDeleted", "==", true)
+        );
         const querySnapshot = await getDocs(q);
-        const files = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        const files = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        console.log("Удаленные файлы:", files); // Отладочное сообщение
         setDeletedFiles(files);
       } catch (error) {
-        console.error('Ошибка при загрузке удаленных файлов:', error);
-        toast.error('Ошибка при загрузке удаленных файлов');
+        console.error("Ошибка при загрузке удаленных файлов:", error);
+        toast.error("Ошибка при загрузке удаленных файлов");
       } finally {
         setIsLoading(false);
       }
     };
-
+  
     fetchDeletedFiles();
   }, [currentUser]);
 
   const handleRestore = async (file) => {
     try {
-      const fileRef = doc(db, 'files', file.id);
+      const fileRef = doc(db, "files", file.id);
       await updateDoc(fileRef, {
         isDeleted: false,
-        deletedAt: null
+        deletedAt: null,
       });
-      setDeletedFiles((prev) => prev.filter((f) => f.id !== file.id));
+      setDeletedFiles(prev => prev.filter(f => f.id !== file.id));
       toast.success(`Файл "${file.name}" восстановлен`);
     } catch (error) {
-      console.error('Ошибка при восстановлении файла:', error);
-      toast.error('Ошибка при восстановлении файла');
+      console.error("Ошибка при восстановлении файла:", error);
+      toast.error("Ошибка при восстановлении файла");
     }
   };
 
   const handlePermanentDelete = async (file) => {
     try {
-      const fileRef = doc(db, 'files', file.id);
+      const fileRef = doc(db, "files", file.id);
       await deleteDoc(fileRef);
-      setDeletedFiles((prev) => prev.filter((f) => f.id !== file.id));
+      setDeletedFiles(prev => prev.filter(f => f.id !== file.id));
       toast.success(`Файл "${file.name}" удален окончательно`);
     } catch (error) {
-      console.error('Ошибка при окончательном удалении файла:', error);
-      toast.error('Ошибка при окончательном удалении файла');
+      console.error("Ошибка при окончательном удалении файла:", error);
+      toast.error("Ошибка при окончательном удалении файла");
     }
   };
 
   const handleSelectFile = (file) => {
-    setSelectedFiles((prevSelected) => {
+    setSelectedFiles(prevSelected => {
       if (prevSelected.includes(file)) {
-        return prevSelected.filter((f) => f !== file);
+        return prevSelected.filter(f => f !== file);
       } else {
         return [...prevSelected, file];
       }
@@ -91,43 +90,43 @@ const Trash = ({ currentUser }) => {
 
   const handleRestoreSelected = async () => {
     try {
-      await Promise.all(
-        selectedFiles.map(async (file) => {
-          const fileRef = doc(db, 'files', file.id);
-          await updateDoc(fileRef, {
-            isDeleted: false,
-            deletedAt: null
-          });
-        })
-      );
-      setDeletedFiles((prev) => prev.filter((f) => !selectedFiles.includes(f)));
+      await Promise.all(selectedFiles.map(async (file) => {
+        const fileRef = doc(db, "files", file.id);
+        await updateDoc(fileRef, {
+          isDeleted: false,
+          deletedAt: null,
+        });
+      }));
+      setDeletedFiles(prev => prev.filter(f => !selectedFiles.includes(f)));
       setSelectedFiles([]);
-      toast.success('Выбранные файлы восстановлены');
+      toast.success("Выбранные файлы восстановлены");
     } catch (error) {
-      console.error('Ошибка при восстановлении выбранных файлов:', error);
-      toast.error('Ошибка при восстановлении выбранных файлов');
+      console.error("Ошибка при восстановлении выбранных файлов:", error);
+      toast.error("Ошибка при восстановлении выбранных файлов");
     }
   };
 
   const handlePermanentDeleteSelected = async () => {
     try {
-      await Promise.all(
-        selectedFiles.map(async (file) => {
-          const fileRef = doc(db, 'files', file.id);
-          await deleteDoc(fileRef);
-        })
-      );
-      setDeletedFiles((prev) => prev.filter((f) => !selectedFiles.includes(f)));
+      await Promise.all(selectedFiles.map(async (file) => {
+        const fileRef = doc(db, "files", file.id);
+        await deleteDoc(fileRef);
+      }));
+      setDeletedFiles(prev => prev.filter(f => !selectedFiles.includes(f)));
       setSelectedFiles([]);
-      toast.success('Выбранные файлы удалены окончательно');
+      toast.success("Выбранные файлы удалены окончательно");
     } catch (error) {
-      console.error('Ошибка при окончательном удалении выбранных файлов:', error);
-      toast.error('Ошибка при окончательном удалении выбранных файлов');
+      console.error("Ошибка при окончательном удалении выбранных файлов:", error);
+      toast.error("Ошибка при окончательном удалении выбранных файлов");
     }
   };
 
   return (
-    <MainCard sx={{ p: 4 }}>
+    <Box sx={{ p: 4 }}>
+      <Typography variant="h4" gutterBottom>
+        Корзина
+      </Typography>
+
       {isLoading ? (
         <Stack direction="row" justifyContent="center" alignItems="center" sx={{ height: '50vh' }}>
           <CircularProgress />
@@ -145,10 +144,20 @@ const Trash = ({ currentUser }) => {
                 <Typography variant="h6">Имя файла</Typography>
                 {selectedFiles.length > 0 && (
                   <Stack direction="row" spacing={1} sx={{ ml: 'auto' }}>
-                    <Button variant="contained" color="primary" startIcon={<RestoreOutlined />} onClick={handleRestoreSelected}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      startIcon={<RestoreFromTrashOutlinedIcon />}
+                      onClick={handleRestoreSelected}
+                    >
                       Восстановить
                     </Button>
-                    <Button variant="contained" color="error" startIcon={<DeleteForeverOutlined />} onClick={handlePermanentDeleteSelected}>
+                    <Button
+                      variant="contained"
+                      color="error"
+                      startIcon={<DeleteForeverOutlinedIcon />}
+                      onClick={handlePermanentDeleteSelected}
+                    >
                       Удалить окончательно
                     </Button>
                   </Stack>
@@ -178,10 +187,10 @@ const Trash = ({ currentUser }) => {
                     <ListItemSecondaryAction>
                       <Stack direction="row" spacing={1}>
                         <IconButton onClick={() => handleRestore(file)} title="Восстановить">
-                          <RestoreOutlined />
+                          <RestoreFromTrashOutlinedIcon />
                         </IconButton>
                         <IconButton onClick={() => handlePermanentDelete(file)} title="Удалить окончательно">
-                          <DeleteForeverOutlined />
+                          <DeleteForeverOutlinedIcon />
                         </IconButton>
                       </Stack>
                     </ListItemSecondaryAction>
@@ -190,11 +199,13 @@ const Trash = ({ currentUser }) => {
               </List>
             </>
           ) : (
-            <Typography variant="body1">Корзина пуста</Typography>
+            <Typography variant="body1">
+              Корзина пуста
+            </Typography>
           )}
         </>
       )}
-    </MainCard>
+    </Box>
   );
 };
 

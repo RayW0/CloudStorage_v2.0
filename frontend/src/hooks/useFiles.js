@@ -1,9 +1,8 @@
-// src/hooks/useFiles.js
+// src/hooks/useFiles.js 
 import { useState, useEffect } from 'react';
 import { getUserFiles } from 'src/utils/GetUserFiles';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import deleteFile from 'src/utils/storage_delete_file';
-import { addDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, updateDoc, addDoc, collection } from 'firebase/firestore';
 import { db } from 'firebaseConfig';
 import uploadToStorage from 'src/utils/uploadToFirebaseStorage';
 import fileDownloadURL from 'utils/storage_download_via_url';
@@ -14,59 +13,78 @@ const useFiles = (currentDirectory) => {
   const [isLoading, setIsLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
 
+  // Инициализация слушателя аутентификации
   useEffect(() => {
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setCurrentUser(user);
-        setIsLoading(true);
-        const userFiles = await getUserFiles(user.uid, currentDirectory);
-        setFiles(userFiles);
-        setIsLoading(false);
+        await fetchFiles(user.uid, currentDirectory);
       } else {
         console.warn('Пользователь не авторизован');
         setFiles([]);
+        setCurrentUser(null);
       }
     });
 
     return () => unsubscribe();
   }, [currentDirectory]);
 
-  const handleDeleteFiles = async (selectedFiles, currentUser) => {
-    if (selectedFiles.length === 0) {
-      toast.warn('Не выбрано ни одного файла для удаления');
-      return;
-    }
+  // Функция для загрузки файлов, учитывая фильтр isDeleted: false
+  const fetchFiles = async (uid, directory) => {
     setIsLoading(true);
     try {
-      await Promise.all(
-        selectedFiles.map(async (file) => {
-          if (file.type === 'folder') {
-            // Проверка, пустая ли папка
-            const folderContents = await getUserFiles(currentUser.uid, `${file.directory}${file.name}/`);
-            if (folderContents.length > 0) {
-              toast.error(`Папка "${file.name}" не пустая`);
-              return;
-            }
-          }
-          // Обновление документа файла, пометка как удаленного
-          const fileRef = doc(db, 'files', file.id);
-          await updateDoc(fileRef, {
-            isDeleted: true,
-            deletedAt: Date.now()
-          });
-          setFiles((prevFiles) => prevFiles.filter((f) => f.id !== file.id));
-        })
-      );
-      toast.success('Файлы перемещены в корзину');
+      const userFiles = await getUserFiles(uid, directory, false); // Передаем параметр isDeleted = false
+      setFiles(userFiles);
     } catch (error) {
-      console.error('Ошибка при удалении выбранных файлов:', error);
-      toast.error('Ошибка при удалении файлов');
+      console.error('Ошибка при загрузке файлов:', error);
+      toast.error('Ошибка при загрузке файлов');
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Функция удаления файлов (перемещение в корзину)
+  const handleDeleteFiles = async (selectedFiles) => {
+    if (!currentUser) {
+      toast.error("Пользователь не авторизован. Пожалуйста, войдите в систему.");
+      return;
+    }
+
+    if (selectedFiles.length === 0) {
+      toast.warn("Не выбрано ни одного файла для удаления");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await Promise.all(selectedFiles.map(async (file) => {
+        if (file.type === 'folder') {
+          // Проверка, пустая ли папка
+          const folderContents = await getUserFiles(currentUser.uid, `${file.directory}${file.name}/`, false);
+          if (folderContents.length > 0) {
+            toast.error(`Папка "${file.name}" не пустая`);
+            return;
+          }
+        }
+        // Пометка файла как удаленного
+        const fileRef = doc(db, "files", file.id);
+        await updateDoc(fileRef, {
+          isDeleted: true,
+          deletedAt: Date.now(), // Или используйте Firestore Timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        setFiles((prevFiles) => prevFiles.filter((f) => f.id !== file.id));
+      }));
+      toast.success("Файлы перемещены в корзину");
+    } catch (error) {
+      console.error("Ошибка при удалении выбранных файлов:", error);
+      toast.error("Ошибка при удалении файлов");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Функция загрузки файлов
   const handleUploadFile = async (file, currentDirectory) => {
     if (!currentUser) {
       toast.error('Пользователь не авторизован. Пожалуйста, войдите в систему.');
@@ -84,7 +102,9 @@ const useFiles = (currentDirectory) => {
         downloadURL,
         path: filePath,
         directory: currentDirectory,
-        type: 'file'
+        type: 'file',
+        isDeleted: false, // Явно устанавливаем как не удаленный
+        deletedAt: null,  // Явно устанавливаем как не удаленный
       };
 
       const docRef = await addDoc(collection(db, 'files'), newFile);
@@ -100,6 +120,7 @@ const useFiles = (currentDirectory) => {
     }
   };
 
+  // Функция скачивания файла
   const handleDownloadFile = async (file) => {
     try {
       const URL = await fileDownloadURL(file);
@@ -116,6 +137,7 @@ const useFiles = (currentDirectory) => {
     }
   };
 
+  // Функция копирования ссылки на файл
   const handleCopyLink = async (file) => {
     try {
       await navigator.clipboard.writeText(file.downloadURL);
@@ -126,7 +148,8 @@ const useFiles = (currentDirectory) => {
     }
   };
 
-  const handleCreateFolder = async (folderName, currentDirectory) => {
+  // Функция создания папки
+  const handleCreateFolder = async (folderName) => {
     if (!currentUser) {
       toast.error('Пользователь не авторизован. Пожалуйста, войдите в систему.');
       return;
@@ -139,13 +162,16 @@ const useFiles = (currentDirectory) => {
       return;
     }
 
+    setIsLoading(true);
     try {
       const newFolder = {
         name: folderName,
         ownerId: currentUser.uid,
         directory: currentDirectory,
         type: 'folder',
-        last_modified: Date.now()
+        last_modified: Date.now(),
+        isDeleted: false, // Новая папка не удалена
+        deletedAt: null,
       };
 
       const docRef = await addDoc(collection(db, 'files'), newFolder);
@@ -156,6 +182,8 @@ const useFiles = (currentDirectory) => {
     } catch (error) {
       console.error('Ошибка при создании папки:', error);
       toast.error('Ошибка при создании папки');
+    } finally {
+      setIsLoading(false);
     }
   };
 
