@@ -1,28 +1,31 @@
-// src/components/UserSelect.jsx
+// src/components/adminPanel/UserSelect.jsx
 import React from 'react';
-import { FormControl, InputLabel, Select, MenuItem, Tooltip } from '@mui/material';
-import { Person } from '@mui/icons-material';
+import { FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import PropTypes from 'prop-types';
 
 const UserSelect = ({ uid, setUid, users, disabled }) => (
-  <FormControl fullWidth variant="outlined">
-    <InputLabel id="user-label">Пользователь</InputLabel>
+  <FormControl fullWidth disabled={disabled}>
+    <InputLabel id="user-select-label">Пользователь</InputLabel>
     <Select
-      labelId="user-label"
+      labelId="user-select-label"
       value={uid}
-      onChange={(e) => setUid(e.target.value)}
       label="Пользователь"
-      startAdornment={<Person />}
-      disabled={disabled}
+      onChange={(e) => setUid(e.target.value)}
     >
-      {users.length > 0 ? users.map((user) => (
+      {Array.isArray(users) && users.map((user) => (
         <MenuItem key={user.uid} value={user.uid}>
-          {user.displayName || user.email} {user.isBlocked ? "(Заблокирован)" : ""}
+          {user.name}
         </MenuItem>
-      )) : (
-        <MenuItem disabled>Нет пользователей</MenuItem>
-      )}
+      ))}
     </Select>
   </FormControl>
 );
+
+UserSelect.propTypes = {
+  uid: PropTypes.string.isRequired,
+  setUid: PropTypes.func.isRequired,
+  users: PropTypes.array.isRequired,
+  disabled: PropTypes.bool,
+};
 
 export default UserSelect;

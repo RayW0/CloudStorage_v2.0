@@ -1,7 +1,16 @@
 // src/pages/AdminPanel.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Typography, Stack, Box } from '@mui/material';
+import {
+  Button,
+  Typography,
+  Stack,
+  Box,
+  List,
+  ListItem,
+  Checkbox,
+  ListItemText,
+} from '@mui/material';
 import { CheckCircle } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import MainCard from 'components/MainCard';
@@ -12,10 +21,12 @@ import CreateGroupForm from 'components/adminPanel/CreateGroupForm';
 import GroupsList from 'components/adminPanel/GroupsList';
 import UserActions from 'components/adminPanel/UserActions';
 import ConfirmationDialog from 'components/adminPanel/ConfirmationDialog';
-import useAdminPanel from 'hooks/useAdminPanel';
+import useAdminPanel from '../hooks/useAdminPanel';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function AdminPanel() {
   const navigate = useNavigate();
+  const { currentUser, isLoading: authIsLoading, token } = useAuth();
   const {
     uid,
     setUid,
@@ -27,26 +38,44 @@ export default function AdminPanel() {
     groups,
     newGroupName,
     setNewGroupName,
+    groupMembers,
+    handleToggleMember,
     isLoading,
-    uploading,
     handleAssignRole,
     handleAssignGroup,
     handleCreateGroup,
     handleDeleteGroup,
     handleDeleteUser,
     handleBlockUser,
-    handleUnblockUser
+    handleUnblockUser,
+    handleRemoveUserFromGroup
   } = useAdminPanel();
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [unblockDialogOpen, setUnblockDialogOpen] = useState(false);
 
-  // Проверка наличия токена и перенаправление при его отсутствии
-  if (!isLoading && !users.length && !groups.length) {
-    toast.error('Токен отсутствует или данные не загружены.');
-    navigate('/login');
-    return null;
+  useEffect(() => {
+    // Проверка на наличие токена и текущего пользователя
+    if (!authIsLoading && (!currentUser || !token)) {
+      toast.error('Вы не авторизованы. Пожалуйста, войдите в систему.');
+      navigate('/login');
+    }
+  }, [authIsLoading, currentUser, token, navigate]);
+
+  useEffect(() => {
+    console.log('groupMembers:', groupMembers);
+  }, [groupMembers]);
+
+  if (authIsLoading || !token || !currentUser) {
+    // Показать индикатор загрузки или сообщение, если пользователь не авторизован
+    return (
+      <MainCard style={{ padding: '30px', maxWidth: '800px', margin: '2% auto' }}>
+        <Typography variant="h5" align="center">
+          Загрузка...
+        </Typography>
+      </MainCard>
+    );
   }
 
   return (
@@ -89,11 +118,40 @@ export default function AdminPanel() {
           Назначить группу
         </Button>
 
-        {/* Поле для создания новой группы */}
-        <CreateGroupForm newGroupName={newGroupName} setNewGroupName={setNewGroupName} handleCreateGroup={handleCreateGroup} />
+         {/* Поле для создания новой группы */}
+         <Box sx={{ border: '1px solid #ccc', padding: '20px', borderRadius: '8px' }}>
+          <Typography variant="h6" gutterBottom>
+            Создать новую группу
+          </Typography>
+          <CreateGroupForm
+            newGroupName={newGroupName}
+            setNewGroupName={setNewGroupName}
+            handleCreateGroup={handleCreateGroup}
+          />
+          <Typography variant="subtitle1">Выберите участников группы:</Typography>
+          <List>
+            {Array.isArray(users) && users.map((user) => (
+              <ListItem key={user.uid} button onClick={() => handleToggleMember(user.uid)}>
+                <Checkbox
+                  edge="start"
+                  checked={Array.isArray(groupMembers) && groupMembers.includes(user.uid)}
+                  tabIndex={-1}
+                  disableRipple
+                />
+                <ListItemText primary={user.name} />
+              </ListItem>
+            ))}
+          </List>
+        </Box>
 
-        {/* Отображение списка групп с возможностью удаления */}
-        <GroupsList groups={groups} handleDeleteGroup={handleDeleteGroup} />
+        {/* Отображение списка групп с возможностью удаления и управления участниками */}
+        <GroupsList
+          groups={groups}
+          handleDeleteGroup={handleDeleteGroup}
+          handleRemoveUserFromGroup={handleRemoveUserFromGroup}
+          users={users} // Передаем список пользователей для отображения имен
+        />
+
 
         {/* Кнопки управления пользователями */}
         <UserActions

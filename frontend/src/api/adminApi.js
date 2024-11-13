@@ -28,7 +28,7 @@ export const getUsers = async (token) => {
         Authorization: `Bearer ${token}`,
       },
     });
-    return response.data.users;
+    return response.data.users; // Ожидается, что сервер возвращает { users: [...] }
   } catch (error) {
     handleApiError(error);
     throw error;
@@ -91,11 +91,13 @@ export const assignGroup = async (token, uid, groupId) => {
 };
 
 // Создание новой группы
-export const createGroup = async (token, groupName) => {
+export const createGroup = async (token, groupName, members) => {
   try {
     const response = await apiClient.post(
       '/create-group',
-      { name: groupName },
+      { name: groupName,
+        members: members 
+      },
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -126,6 +128,20 @@ export const deleteGroup = async (token, groupId) => {
     return response.data;
   } catch (error) {
     handleApiError(error);
+    throw error;
+  }
+};
+
+//Удаление поьзователя из группы
+export const removeUserFromGroup = async (groupId, userId) => {
+  try {
+    const groupRef = doc(db, 'groups', groupId);
+    await updateDoc(groupRef, {
+      members: arrayRemove(userId),
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Ошибка при удалении пользователя из группы:', error);
     throw error;
   }
 };

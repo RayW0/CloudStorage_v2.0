@@ -1,51 +1,52 @@
-// src/components/UserActions.jsx
+// src/components/adminPanel/UserActions.jsx
 import React from 'react';
 import { Stack, Button } from '@mui/material';
-import { DeleteOutline, Block, CheckCircle } from '@mui/icons-material';
-import { toast } from 'react-toastify';
+import DeleteIcon from '@mui/icons-material/Delete';
+import BlockIcon from '@mui/icons-material/Block';
+import LockOpenIcon from '@mui/icons-material/LockOpen';
+import PropTypes from 'prop-types';
 
-const UserActions = ({
-  uid,
-  handleDeleteUser,
-  handleBlockUser,
-  handleUnblockUser,
-  isBlocked,
-}) => {
-  return (
-    <Stack direction="row" spacing={2}>
+const UserActions = ({ uid, handleDeleteUser, handleBlockUser, handleUnblockUser, isBlocked }) => (
+  <Stack direction="row" spacing={2}>
+    <Button
+      variant="outlined"
+      color="error"
+      startIcon={<DeleteIcon />}
+      onClick={handleDeleteUser}
+      disabled={!uid}
+    >
+      Удалить пользователя
+    </Button>
+    {isBlocked ? (
       <Button
         variant="outlined"
-        color="error"
-        startIcon={<DeleteOutline />}
-        onClick={handleDeleteUser}
+        color="success"
+        startIcon={<LockOpenIcon />}
+        onClick={handleUnblockUser}
         disabled={!uid}
       >
-        Удалить пользователя
+        Разблокировать пользователя
       </Button>
+    ) : (
+      <Button
+        variant="outlined"
+        color="warning"
+        startIcon={<BlockIcon />}
+        onClick={handleBlockUser}
+        disabled={!uid}
+      >
+        Заблокировать пользователя
+      </Button>
+    )}
+  </Stack>
+);
 
-      {isBlocked ? (
-        <Button
-          variant="outlined"
-          color="success"
-          startIcon={<CheckCircle />}
-          onClick={handleUnblockUser}
-          disabled={!uid}
-        >
-          Разблокировать пользователя
-        </Button>
-      ) : (
-        <Button
-          variant="outlined"
-          color="warning"
-          startIcon={<Block />}
-          onClick={handleBlockUser}
-          disabled={!uid}
-        >
-          Заблокировать пользователя
-        </Button>
-      )}
-    </Stack>
-  );
+UserActions.propTypes = {
+  uid: PropTypes.string.isRequired,
+  handleDeleteUser: PropTypes.func.isRequired,
+  handleBlockUser: PropTypes.func.isRequired,
+  handleUnblockUser: PropTypes.func.isRequired,
+  isBlocked: PropTypes.bool,
 };
 
 export default UserActions;

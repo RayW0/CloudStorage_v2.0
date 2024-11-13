@@ -1,28 +1,31 @@
-// src/components/GroupSelect.jsx
+// src/components/adminPanel/GroupSelect.jsx
 import React from 'react';
 import { FormControl, InputLabel, Select, MenuItem } from '@mui/material';
-import { Group } from '@mui/icons-material';
+import PropTypes from 'prop-types';
 
 const GroupSelect = ({ groupId, setGroupId, groups, disabled }) => (
-  <FormControl fullWidth variant="outlined">
-    <InputLabel id="group-label">Группа</InputLabel>
+  <FormControl fullWidth disabled={disabled}>
+    <InputLabel id="group-select-label">Группа</InputLabel>
     <Select
-      labelId="group-label"
+      labelId="group-select-label"
       value={groupId}
-      onChange={(e) => setGroupId(e.target.value)}
       label="Группа"
-      startAdornment={<Group />}
-      disabled={disabled}
+      onChange={(e) => setGroupId(e.target.value)}
     >
-      {groups.length > 0 ? groups.map((group) => (
+      {Array.isArray(groups) && groups.map((group) => (
         <MenuItem key={group.id} value={group.id}>
           {group.name}
         </MenuItem>
-      )) : (
-        <MenuItem disabled>Нет групп</MenuItem>
-      )}
+      ))}
     </Select>
   </FormControl>
 );
+
+GroupSelect.propTypes = {
+  groupId: PropTypes.string.isRequired,
+  setGroupId: PropTypes.func.isRequired,
+  groups: PropTypes.array.isRequired,
+  disabled: PropTypes.bool,
+};
 
 export default GroupSelect;

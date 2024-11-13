@@ -1,24 +1,28 @@
-// src/components/RoleSelect.jsx
+// src/components/adminPanel/RoleSelect.jsx
 import React from 'react';
 import { FormControl, InputLabel, Select, MenuItem } from '@mui/material';
-import { Group } from '@mui/icons-material';
+import PropTypes from 'prop-types';
 
 const RoleSelect = ({ role, setRole, disabled }) => (
-  <FormControl fullWidth variant="outlined">
-    <InputLabel id="role-label">Роль</InputLabel>
+  <FormControl fullWidth disabled={disabled}>
+    <InputLabel id="role-select-label">Роль</InputLabel>
     <Select
-      labelId="role-label"
+      labelId="role-select-label"
       value={role}
-      onChange={(e) => setRole(e.target.value)}
       label="Роль"
-      startAdornment={<Group />}
-      disabled={disabled}
+      onChange={(e) => setRole(e.target.value)}
     >
       <MenuItem value="admin">Администратор</MenuItem>
       <MenuItem value="user">Пользователь</MenuItem>
-      <MenuItem value="moderator">Модератор</MenuItem>
+      {/* Добавьте другие роли по необходимости */}
     </Select>
   </FormControl>
 );
+
+RoleSelect.propTypes = {
+  role: PropTypes.string.isRequired,
+  setRole: PropTypes.func.isRequired,
+  disabled: PropTypes.bool,
+};
 
 export default RoleSelect;

@@ -16,14 +16,14 @@ import ScrollTop from 'components/ScrollTop';
 export default function App() {
   return (
     <ThemeCustomization>
-      <UserProfileProvider>
-        <AuthProvider>
+      <AuthProvider>
+        <UserProfileProvider>
           <ScrollTop>
           <ToastContainer />
           <RouterProvider router={router} />
           </ScrollTop>
-        </AuthProvider>
-      </UserProfileProvider>
+        </UserProfileProvider>
+      </AuthProvider>
     </ThemeCustomization>
   );
 }
