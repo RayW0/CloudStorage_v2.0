@@ -1,4 +1,4 @@
-// src/hooks/useFiles.js 
+// src/hooks/useFiles.js
 import { useState, useEffect } from 'react';
 import { getUserFiles } from 'src/utils/GetUserFiles';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
@@ -47,38 +47,40 @@ const useFiles = (currentDirectory) => {
   // Функция удаления файлов (перемещение в корзину)
   const handleDeleteFiles = async (selectedFiles) => {
     if (!currentUser) {
-      toast.error("Пользователь не авторизован. Пожалуйста, войдите в систему.");
+      toast.error('Пользователь не авторизован. Пожалуйста, войдите в систему.');
       return;
     }
 
     if (selectedFiles.length === 0) {
-      toast.warn("Не выбрано ни одного файла для удаления");
+      toast.warn('Не выбрано ни одного файла для удаления');
       return;
     }
 
     setIsLoading(true);
     try {
-      await Promise.all(selectedFiles.map(async (file) => {
-        if (file.type === 'folder') {
-          // Проверка, пустая ли папка
-          const folderContents = await getUserFiles(currentUser.uid, `${file.directory}${file.name}/`, false);
-          if (folderContents.length > 0) {
-            toast.error(`Папка "${file.name}" не пустая`);
-            return;
+      await Promise.all(
+        selectedFiles.map(async (file) => {
+          if (file.type === 'folder') {
+            // Проверка, пустая ли папка
+            const folderContents = await getUserFiles(currentUser.uid, `${file.directory}${file.name}/`, false);
+            if (folderContents.length > 0) {
+              toast.error(`Папка "${file.name}" не пустая`);
+              return;
+            }
           }
-        }
-        // Пометка файла как удаленного
-        const fileRef = doc(db, "files", file.id);
-        await updateDoc(fileRef, {
-          isDeleted: true,
-          deletedAt: Date.now(), // Или используйте Firestore Timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        setFiles((prevFiles) => prevFiles.filter((f) => f.id !== file.id));
-      }));
-      toast.success("Файлы перемещены в корзину");
+          // Пометка файла как удаленного
+          const fileRef = doc(db, 'files', file.id);
+          await updateDoc(fileRef, {
+            isDeleted: true,
+            deletedAt: Date.now() // Или используйте Firestore Timestamp: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          setFiles((prevFiles) => prevFiles.filter((f) => f.id !== file.id));
+        })
+      );
+      toast.success('Файлы перемещены в корзину');
     } catch (error) {
-      console.error("Ошибка при удалении выбранных файлов:", error);
-      toast.error("Ошибка при удалении файлов");
+      console.error('Ошибка при удалении выбранных файлов:', error);
+      toast.error('Ошибка при удалении файлов');
     } finally {
       setIsLoading(false);
     }
@@ -104,7 +106,7 @@ const useFiles = (currentDirectory) => {
         directory: currentDirectory,
         type: 'file',
         isDeleted: false, // Явно устанавливаем как не удаленный
-        deletedAt: null,  // Явно устанавливаем как не удаленный
+        deletedAt: null // Явно устанавливаем как не удаленный
       };
 
       const docRef = await addDoc(collection(db, 'files'), newFile);
@@ -172,6 +174,7 @@ const useFiles = (currentDirectory) => {
         last_modified: Date.now(),
         isDeleted: false, // Новая папка не удалена
         deletedAt: null,
+        groupId: 'none'
       };
 
       const docRef = await addDoc(collection(db, 'files'), newFolder);

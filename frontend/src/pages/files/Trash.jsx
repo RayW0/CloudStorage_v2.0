@@ -147,7 +147,7 @@ const Trash = () => {
   );
 
   return (
-    <MainCard sx={{ p: 4 }}>
+    <MainCard>
       {isLoading ? (
         <Stack direction="row" justifyContent="center" alignItems="center" sx={{ height: '50vh' }}>
           <CircularProgress />

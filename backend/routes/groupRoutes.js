@@ -1,71 +1,98 @@
-// server/routes/groupRoutes.js
-const express = require('express');
+// server/routes/groupRoutes.js или ваш основной серверный файл
+const express = require("express");
+const admin = require("firebase-admin");
 const router = express.Router();
-const admin = require('firebase-admin'); 
-const { firestore } = require('../firebase'); 
 
-// Middleware для аутентификации
-const authMiddleware = async (req, res, next) => {
+// Предполагается, что Firebase уже инициализирован
+const db = admin.firestore();
+
+// Middleware для проверки администраторских прав
+const verifyAdmin = async (req, res, next) => {
   const authHeader = req.headers.authorization;
-  console.log('Authorization Header:', authHeader); // Логирование для отладки
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(403).json({ error: 'Доступ запрещен' });
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Требуется авторизация" });
   }
 
-  const idToken = authHeader.split('Bearer ')[1];
-  console.log('ID Token:', idToken); // Логирование для отладки
+  const idToken = authHeader.split("Bearer ")[1];
 
   try {
     const decodedToken = await admin.auth().verifyIdToken(idToken);
-    console.log('Decoded Token:', decodedToken); // Логирование для отладки
-    req.user = decodedToken;
-    next();
+    if (decodedToken.admin === true) {
+      req.user = decodedToken;
+      return next();
+    } else {
+      return res
+        .status(403)
+        .json({ error: "Доступ запрещен: требуется роль администратора" });
+    }
   } catch (error) {
-    console.error('Ошибка при проверке токена:', error);
-    res.status(403).json({ error: 'Доступ запрещен' });
+    console.error("Ошибка при проверке токена:", error);
+    return res.status(403).json({ error: "Доступ запрещен" });
   }
 };
 
-// Создание новой группы
-router.post('/create-group', authMiddleware, async (req, res) => {
-  const { name, members } = req.body;
-  const ownerId = req.user.uid;
+// Эндпоинт для удаления пользователя из группы
+router.post("/remove-user-from-group", verifyAdmin, async (req, res) => {
+  const { groupId, userId } = req.body;
 
-  if (!name || !Array.isArray(members)) {
-    return res.status(400).json({ error: 'Некорректные данные' });
+  if (!groupId || !userId) {
+    return res.status(400).json({ error: "groupId и userId обязательны" });
   }
 
   try {
-    const newGroupRef = await firestore.collection('groups').add({
-      name,
-      ownerId,
-      members,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    // Удаляем пользователя из массива members в группе
+    const groupRef = db.collection("groups").doc(groupId);
+    await groupRef.update({
+      members: admin.firestore.FieldValue.arrayRemove(userId),
     });
 
-    // Обновление документов пользователей, чтобы добавить группы
-    const batch = firestore.batch();
-    members.forEach((uid) => {
-      const userRef = firestore.collection('users').doc(uid);
-      batch.update(userRef, {
-        groups: admin.firestore.FieldValue.arrayUnion(newGroupRef.id),
-      });
+    // Обновляем поле groupId у пользователя
+    const userRef = db.collection("users").doc(userId);
+    await userRef.update({ groupId: null });
+
+    res.json({ message: "Пользователь успешно удален из группы" });
+  } catch (error) {
+    console.error("Ошибка при удалении пользователя из группы:", error);
+    res
+      .status(500)
+      .json({ error: "Не удалось удалить пользователя из группы" });
+  }
+});
+
+router.post("/delete-group", verifyAdmin, async (req, res) => {
+  const { groupId } = req.body;
+
+  if (!groupId) {
+    return res.status(400).json({ error: "groupId обязателен" });
+  }
+
+  try {
+    const groupRef = admin.firestore().collection("groups").doc(groupId);
+    const groupDoc = await groupRef.get();
+
+    if (!groupDoc.exists) {
+      return res.status(404).json({ error: "Группа не найдена" });
+    }
+
+    const groupData = groupDoc.data();
+
+    // Удаляем группу из Firestore
+    await groupRef.delete();
+
+    // Обновляем поле groupId у всех участников группы
+    const batch = admin.firestore().batch();
+    groupData.members.forEach((uid) => {
+      const userRef = admin.firestore().collection("users").doc(uid);
+      batch.update(userRef, { groupId: admin.firestore.FieldValue.delete() });
     });
+
     await batch.commit();
 
-    const newGroup = {
-      id: newGroupRef.id,
-      name,
-      ownerId,
-      members,
-      createdAt: new Date(),
-    };
-
-    res.status(201).json(newGroup);
+    res.json({ message: "Группа успешно удалена" });
   } catch (error) {
-    console.error('Ошибка при создании группы:', error);
-    res.status(500).json({ error: 'Ошибка при создании группы' });
+    console.error("Ошибка при удалении группы:", error);
+    res.status(500).json({ error: "Не удалось удалить группу" });
   }
 });
 

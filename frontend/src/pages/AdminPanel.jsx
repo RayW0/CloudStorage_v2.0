@@ -1,16 +1,7 @@
 // src/pages/AdminPanel.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Button,
-  Typography,
-  Stack,
-  Box,
-  List,
-  ListItem,
-  Checkbox,
-  ListItemText,
-} from '@mui/material';
+import { Button, Typography, Stack, Box, List, ListItem, Checkbox, ListItemText } from '@mui/material';
 import { CheckCircle } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import MainCard from 'components/MainCard';
@@ -118,29 +109,26 @@ export default function AdminPanel() {
           Назначить группу
         </Button>
 
-         {/* Поле для создания новой группы */}
-         <Box sx={{ border: '1px solid #ccc', padding: '20px', borderRadius: '8px' }}>
+        {/* Поле для создания новой группы */}
+        <Box sx={{ border: '1px solid #ccc', padding: '20px', borderRadius: '8px' }}>
           <Typography variant="h6" gutterBottom>
             Создать новую группу
           </Typography>
-          <CreateGroupForm
-            newGroupName={newGroupName}
-            setNewGroupName={setNewGroupName}
-            handleCreateGroup={handleCreateGroup}
-          />
+          <CreateGroupForm newGroupName={newGroupName} setNewGroupName={setNewGroupName} handleCreateGroup={handleCreateGroup} />
           <Typography variant="subtitle1">Выберите участников группы:</Typography>
           <List>
-            {Array.isArray(users) && users.map((user) => (
-              <ListItem key={user.uid} button onClick={() => handleToggleMember(user.uid)}>
-                <Checkbox
-                  edge="start"
-                  checked={Array.isArray(groupMembers) && groupMembers.includes(user.uid)}
-                  tabIndex={-1}
-                  disableRipple
-                />
-                <ListItemText primary={user.name} />
-              </ListItem>
-            ))}
+            {Array.isArray(users) &&
+              users.map((user) => (
+                <ListItem key={user.uid} button onClick={() => handleToggleMember(user.uid)}>
+                  <Checkbox
+                    edge="start"
+                    checked={Array.isArray(groupMembers) && groupMembers.includes(user.uid)}
+                    tabIndex={-1}
+                    disableRipple
+                  />
+                  <ListItemText primary={user.displayName} />
+                </ListItem>
+              ))}
           </List>
         </Box>
 
@@ -151,7 +139,6 @@ export default function AdminPanel() {
           handleRemoveUserFromGroup={handleRemoveUserFromGroup}
           users={users} // Передаем список пользователей для отображения имен
         />
-
 
         {/* Кнопки управления пользователями */}
         <UserActions

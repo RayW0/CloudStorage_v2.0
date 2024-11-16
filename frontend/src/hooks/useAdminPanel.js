@@ -11,7 +11,7 @@ import {
   deleteUser,
   blockUser,
   unblockUser,
-  removeUserFromGroup, // Импортируем новую функцию из API
+  removeUserFromGroup
 } from '../api/adminApi';
 import { toast } from 'react-toastify';
 
@@ -34,10 +34,7 @@ const useAdminPanel = () => {
       }
 
       try {
-        const [fetchedUsers, fetchedGroups] = await Promise.all([
-          getUsers(token),
-          getGroups(token),
-        ]);
+        const [fetchedUsers, fetchedGroups] = await Promise.all([getUsers(token), getGroups(token)]);
         setUsers(Array.isArray(fetchedUsers) ? fetchedUsers : []);
         setGroups(Array.isArray(fetchedGroups) ? fetchedGroups : []);
       } catch (error) {
@@ -53,9 +50,7 @@ const useAdminPanel = () => {
 
   const handleToggleMember = (userId) => {
     setGroupMembers((prevSelected) =>
-      prevSelected.includes(userId)
-        ? prevSelected.filter((id) => id !== userId)
-        : [...prevSelected, userId]
+      prevSelected.includes(userId) ? prevSelected.filter((id) => id !== userId) : [...prevSelected, userId]
     );
   };
 
@@ -67,9 +62,7 @@ const useAdminPanel = () => {
 
     try {
       await assignRole(token, uid, role);
-      setUsers((prevUsers) =>
-        prevUsers.map((user) => (user.uid === uid ? { ...user, role } : user))
-      );
+      setUsers((prevUsers) => prevUsers.map((user) => (user.uid === uid ? { ...user, role } : user)));
       setUid('');
       setRole('');
       toast.success('Роль успешно назначена');
@@ -87,9 +80,7 @@ const useAdminPanel = () => {
 
     try {
       await assignGroup(token, uid, groupId);
-      setUsers((prevUsers) =>
-        prevUsers.map((user) => (user.uid === uid ? { ...user, group: groupId } : user))
-      );
+      setUsers((prevUsers) => prevUsers.map((user) => (user.uid === uid ? { ...user, group: groupId } : user)));
       setUid('');
       setGroupId('');
       toast.success('Группа успешно назначена');
@@ -111,11 +102,21 @@ const useAdminPanel = () => {
     }
 
     try {
-      const newGroup = await createGroup(token, newGroupName, groupMembers);
-      setGroups((prevGroups) => [...prevGroups, newGroup]);
-      setNewGroupName('');
-      setGroupMembers([]);
-      toast.success('Группа успешно создана!');
+      // Логирование перед отправкой запроса
+      console.log('Отправляем данные для создания группы:', { name: newGroupName, members: groupMembers });
+
+      const response = await createGroup(token, newGroupName, groupMembers);
+      console.log('Ответ сервера при создании группы:', response);
+
+      // Проверяем, что response содержит все необходимые поля
+      if (response && response.id && response.name && Array.isArray(response.members)) {
+        setGroups((prevGroups) => [...prevGroups, response]);
+        setNewGroupName('');
+        setGroupMembers([]);
+        toast.success('Группа успешно создана!');
+      } else {
+        throw new Error('Некорректный ответ от сервера');
+      }
     } catch (error) {
       console.error('Ошибка при создании группы:', error);
       toast.error('Ошибка при создании группы');
@@ -158,11 +159,7 @@ const useAdminPanel = () => {
 
     try {
       await blockUser(token, uid);
-      setUsers((prevUsers) =>
-        prevUsers.map((user) =>
-          user.uid === uid ? { ...user, isBlocked: true } : user
-        )
-      );
+      setUsers((prevUsers) => prevUsers.map((user) => (user.uid === uid ? { ...user, isBlocked: true } : user)));
       setUid('');
       toast.success('Пользователь успешно заблокирован');
     } catch (error) {
@@ -179,11 +176,7 @@ const useAdminPanel = () => {
 
     try {
       await unblockUser(token, uid);
-      setUsers((prevUsers) =>
-        prevUsers.map((user) =>
-          user.uid === uid ? { ...user, isBlocked: false } : user
-        )
-      );
+      setUsers((prevUsers) => prevUsers.map((user) => (user.uid === uid ? { ...user, isBlocked: false } : user)));
       setUid('');
       toast.success('Пользователь успешно разблокирован');
     } catch (error) {
@@ -197,11 +190,7 @@ const useAdminPanel = () => {
     try {
       await removeUserFromGroup(token, groupId, userId);
       setGroups((prevGroups) =>
-        prevGroups.map((group) =>
-          group.id === groupId
-            ? { ...group, members: group.members.filter((id) => id !== userId) }
-            : group
-        )
+        prevGroups.map((group) => (group.id === groupId ? { ...group, members: group.members.filter((id) => id !== userId) } : group))
       );
       toast.success('Пользователь успешно удален из группы');
     } catch (error) {
@@ -231,7 +220,7 @@ const useAdminPanel = () => {
     handleDeleteUser,
     handleBlockUser,
     handleUnblockUser,
-    handleRemoveUserFromGroup, // Добавляем функцию в возвращаемый объект
+    handleRemoveUserFromGroup // Добавляем функцию в возвращаемый объект
   };
 };
 

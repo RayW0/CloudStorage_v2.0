@@ -1,16 +1,30 @@
-
 // src/components/FileList.jsx
 import React, { useState } from 'react';
 import {
-  List, ListItem, ListItemText, ListItemSecondaryAction, Tooltip, IconButton,
-  Typography, Stack, Divider, Button, MenuItem, Select, FormControl, Checkbox,
-  CircularProgress, Menu, Avatar, Grid, ToggleButtonGroup, ToggleButton, Box
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
+  Tooltip,
+  IconButton,
+  Typography,
+  Stack,
+  Divider,
+  Button,
+  MenuItem,
+  Select,
+  FormControl,
+  Checkbox,
+  CircularProgress,
+  Menu,
+  Avatar,
+  Grid,
+  ToggleButtonGroup,
+  ToggleButton,
+  Box
 } from '@mui/material';
-import {
-  DownloadOutlined, DeleteOutlined, PlusCircleOutlined, FolderOutlined, ArrowLeftOutlined, LinkOutlined
-} from '@ant-design/icons';
+import { DownloadOutlined, DeleteOutlined, PlusCircleOutlined, FolderOutlined, ArrowLeftOutlined, LinkOutlined } from '@ant-design/icons';
 import MainCard from 'components/MainCard';
-import { toast } from 'react-toastify';
 
 import BreadcrumbsNav from 'components/@extended/BreadcrumbsNav';
 import SortControls from 'components/@extended/SortControls';
@@ -21,23 +35,15 @@ import useFiles from 'hooks/useFiles';
 import useSort from 'hooks/useSort';
 
 const FileList = () => {
-  const [sortField, setSortField] = useState("name");
-  const [sortOrder, setSortOrder] = useState("asc");
+  const [sortField, setSortField] = useState('name');
+  const [sortOrder, setSortOrder] = useState('asc');
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
   const [currentDirectory, setCurrentDirectory] = useState('/');
   const [viewMode, setViewMode] = useState('list'); // 'list' или 'grid'
 
-  const {
-    files,
-    isLoading,
-    handleDeleteFiles,
-    handleUploadFile,
-    handleDownloadFile,
-    handleCopyLink,
-    handleCreateFolder,
-    currentUser
-  } = useFiles(currentDirectory);
+  const { files, isLoading, handleDeleteFiles, handleUploadFile, handleDownloadFile, handleCopyLink, handleCreateFolder, currentUser } =
+    useFiles(currentDirectory);
 
   const sortedFiles = useSort(files, sortField, sortOrder);
 
@@ -86,14 +92,7 @@ const FileList = () => {
       case 'jpeg':
       case 'png':
       case 'gif':
-        return (
-          <Avatar
-            variant="square"
-            src={file.downloadURL}
-            alt={file.name}
-            sx={{ width: 24, height: 24, mr: 1 }}
-          />
-        );
+        return <Avatar variant="square" src={file.downloadURL} alt={file.name} sx={{ width: 24, height: 24, mr: 1 }} />;
       case 'pdf':
         return <FilePdfOutlined style={{ fontSize: 24 }} />;
       case 'zip':
@@ -113,7 +112,7 @@ const FileList = () => {
   };
 
   const handleNavigateBack = () => {
-    const paths = currentDirectory.split('/').filter(p => p);
+    const paths = currentDirectory.split('/').filter((p) => p);
     paths.pop();
     const newPath = `/${paths.join('/')}${paths.length > 0 ? '/' : ''}`;
     setCurrentDirectory(newPath);
@@ -143,7 +142,7 @@ const FileList = () => {
         <FileActions
           onUploadClick={() => document.getElementById('file-upload').click()}
           onCreateFolderClick={() => {
-            const folderName = prompt("Введите имя новой папки:");
+            const folderName = prompt('Введите имя новой папки:');
             if (folderName) {
               handleCreateFolder(folderName, currentDirectory);
             }
@@ -158,12 +157,7 @@ const FileList = () => {
           }}
         />
         {selectedFiles.length > 0 && (
-          <Button
-            variant="contained"
-            color="error"
-            onClick={handleDeleteSelected}
-            startIcon={<DeleteOutlined />}
-          >
+          <Button variant="contained" color="error" onClick={handleDeleteSelected} startIcon={<DeleteOutlined />}>
             Удалить
           </Button>
         )}
@@ -207,7 +201,7 @@ const FileList = () => {
                       }}
                       selected={isFileSelected(file)}
                       sx={{
-                        bgcolor: isFileSelected(file) ? 'action.selected' : 'inherit',
+                        bgcolor: isFileSelected(file) ? 'action.selected' : 'inherit'
                       }}
                     >
                       <Checkbox
@@ -227,7 +221,7 @@ const FileList = () => {
                             </Typography>
                           </Stack>
                         }
-                        secondary={`Размер: ${file.size ? (file.size / (1024 * 1024)).toFixed(2) + ' MB' : '—'} | Изменен: ${new Date(file.last_modified).toLocaleString()} | Владелец: ${currentUser?.displayName || "Неизвестный пользователь"}`}
+                        secondary={`Размер: ${file.size ? (file.size / (1024 * 1024)).toFixed(2) + ' MB' : '—'} | Изменен: ${new Date(file.last_modified).toLocaleString()} | Владелец: ${currentUser?.displayName || 'Неизвестный пользователь'}`}
                       />
                       <ListItemSecondaryAction>
                         <Stack direction="row" spacing={1}>
@@ -271,9 +265,9 @@ const FileList = () => {
                         position: 'relative',
                         backgroundColor: isFileSelected(file) ? 'rgba(25, 118, 210, 0.1)' : 'inherit',
                         '&:hover': {
-                          boxShadow: 3,
+                          boxShadow: 3
                         },
-                        height: '100%',
+                        height: '100%'
                       }}
                       onClick={() => {
                         if (file.type === 'folder') {
@@ -312,7 +306,7 @@ const FileList = () => {
                             {`Изменен: ${new Date(file.last_modified).toLocaleString()}`}
                           </Typography>
                           <Typography variant="caption" color="textSecondary">
-                            {`Владелец: ${currentUser?.displayName || "Неизвестный пользователь"}`}
+                            {`Владелец: ${currentUser?.displayName || 'Неизвестный пользователь'}`}
                           </Typography>
 
                           {/* Действия для файлов (скачать, копировать ссылку) */}
