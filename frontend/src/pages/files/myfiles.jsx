@@ -15,7 +15,8 @@ import {
   CircularProgress,
   Grid,
   Box,
-  Avatar
+  Avatar,
+  Tooltip
 } from '@mui/material';
 import {
   DownloadOutlined,
@@ -35,7 +36,6 @@ import BreadcrumbsNav from 'components/@extended/BreadcrumbsNav';
 import SortControls from 'components/@extended/SortControls';
 import FileActions from 'components/files/FileActions';
 import ViewModeToggle from 'components/@extended/ViewModeToggle';
-import SimpleDropdown from 'components/Dropdown';
 import useFiles from 'hooks/useFiles';
 import useSort from 'hooks/useSort';
 
@@ -291,23 +291,21 @@ const FileList = () => {
                       />
                       <ListItemSecondaryAction>
                         <Stack direction="row" spacing={1}>
-                          {/* Действия для папки */}
-                          <SimpleDropdown file={folder} />
-
                           {/* Кнопка "Поделиться с группой" или "Закрыть доступ" */}
                           {folder.ownerId === currentUser?.uid && (
                             <>
                               {folder.groupId === null ? (
-                                <IconButton
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleShareFolderToGroup(folder);
-                                  }}
-                                  title="Поделиться с группой"
-                                  color="primary"
-                                >
-                                  <ShareAltOutlined />
-                                </IconButton>
+                                <Tooltip title="Поделиться с группой">
+                                  <IconButton
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleShareFolderToGroup(folder);
+                                    }}
+                                    color="primary"
+                                  >
+                                    <ShareAltOutlined />
+                                  </IconButton>
+                                </Tooltip>
                               ) : (
                                 <IconButton
                                   onClick={(e) => {
@@ -374,7 +372,6 @@ const FileList = () => {
                           <IconButton onClick={() => handleCopyLink(file)}>
                             <LinkOutlined />
                           </IconButton>
-                          <SimpleDropdown file={file} />
                         </Stack>
                       </ListItemSecondaryAction>
                     </ListItem>
@@ -441,7 +438,6 @@ const FileList = () => {
 
                       {/* Действия для папки */}
                       <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                        <SimpleDropdown file={folder} />
                         {/* Кнопка "Поделиться с группой" или статус */}
                         {folder.groupId === null && folder.ownerId === currentUser?.uid && (
                           <IconButton

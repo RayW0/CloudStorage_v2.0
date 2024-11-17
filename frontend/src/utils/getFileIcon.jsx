@@ -1,6 +1,7 @@
 // src/utils/getFileIcon.js
 
 import React from 'react';
+import { Avatar } from '@mui/material'; // Импортируем Avatar
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
@@ -11,7 +12,6 @@ import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import CodeOutlinedIcon from '@mui/icons-material/CodeOutlined';
 import ArchiveOutlinedIcon from '@mui/icons-material/ArchiveOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
-import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
 
 /**
  * Функция для получения иконки файла на основе его типа или расширения.
@@ -19,6 +19,7 @@ import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
  * @param {Object} file - Объект файла.
  * @param {string} file.type - Тип файла (например, 'file' или 'folder').
  * @param {string} file.name - Имя файла.
+ * @param {string} [file.downloadURL] - URL изображения (для аватара).
  * @returns {JSX.Element} - Компонент иконки.
  */
 const getFileIcon = (file) => {
@@ -39,7 +40,17 @@ const getFileIcon = (file) => {
     case 'jpeg':
     case 'png':
     case 'gif':
-      return <ImageOutlinedIcon />;
+      // Если у файла есть downloadURL, отображаем Avatar с изображением
+      return file.downloadURL ? (
+        <Avatar
+          variant="square"
+          src={file.downloadURL}
+          alt={file.name}
+          sx={{ width: 24, height: 24, mr: 1 }} // Настройка размера Avatar
+        />
+      ) : (
+        <ImageOutlinedIcon />
+      );
     case 'mp3':
     case 'wav':
       return <AudiotrackOutlinedIcon />;

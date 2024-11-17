@@ -1,52 +1,34 @@
 // src/components/FileListView.jsx
 
 import React from 'react';
-import { List, ListItem, ListItemIcon, ListItemText, Checkbox, ListItemSecondaryAction, Stack, Typography } from '@mui/material';
-import PropTypes from 'prop-types';
-import getFileIcon from 'src/utils/getFileIcon';
+import { List, ListItem, ListItemText, ListItemSecondaryAction, IconButton, Typography, Checkbox, Stack } from '@mui/material';
+import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
+import getFileIcon from 'utils/getFileIcon';
 
-const FileListView = ({ files, selectedFiles, toggleFileSelection, actionButtons }) => {
+const FileListView = ({ files, selectedFiles, toggleFileSelection, actionButtons, isFolder = false }) => {
   return (
     <List>
-      {files.length > 0 ? (
-        files.map((file) => (
-          <ListItem key={file.id} button onClick={() => toggleFileSelection(file)}>
-            <Checkbox
-              edge="start"
-              checked={selectedFiles.some((f) => f.id === file.id)}
-              tabIndex={-1}
-              disableRipple
-              onChange={() => toggleFileSelection(file)}
-              onClick={(e) => e.stopPropagation()}
-            />
-            <ListItemIcon>{getFileIcon(file)}</ListItemIcon>
-            <ListItemText
-              primary={file.name}
-              secondary={`Размер: ${file.size ? (file.size / (1024 * 1024)).toFixed(2) + ' MB' : '—'} | Удален: ${
-                file.deletedAt
-                  ? file.deletedAt instanceof Date
-                    ? file.deletedAt.toLocaleString()
-                    : new Date(file.deletedAt.seconds * 1000).toLocaleString()
-                  : '—'
-              }`}
-            />
-            {actionButtons && <ListItemSecondaryAction>{actionButtons(file)}</ListItemSecondaryAction>}
-          </ListItem>
-        ))
-      ) : (
-        <Typography variant="body1" sx={{ mt: 2 }}>
-          Файлы не найдены
-        </Typography>
-      )}
+      {files.map((item) => (
+        <ListItem key={item.id}>
+          <Checkbox checked={selectedFiles.some((f) => f.id === item.id)} onChange={() => toggleFileSelection(item)} />
+          <ListItemText
+            primary={
+              <Stack direction="row" alignItems="center">
+                {isFolder ? <FolderOutlinedIcon style={{ marginRight: 8 }} /> : getFileIcon(item)}
+                <Typography variant="body1">{item.name}</Typography>
+              </Stack>
+            }
+            secondary={
+              isFolder
+                ? `Удалён: ${item.deletedAt ? new Date(item.deletedAt).toLocaleString() : 'Неизвестно'} | Размер: ${item.size ? (item.size / (1024 * 1024)).toFixed(2) + ' MB' : '—'}`
+                : `Размер: ${item.size ? (item.size / (1024 * 1024)).toFixed(2) + ' MB' : '—'} | Удалён: ${item.deletedAt ? new Date(item.deletedAt).toLocaleString() : 'Неизвестно'}`
+            }
+          />
+          <ListItemSecondaryAction>{actionButtons(item)}</ListItemSecondaryAction>
+        </ListItem>
+      ))}
     </List>
   );
-};
-
-FileListView.propTypes = {
-  files: PropTypes.array.isRequired,
-  selectedFiles: PropTypes.array.isRequired,
-  toggleFileSelection: PropTypes.func.isRequired,
-  actionButtons: PropTypes.func
 };
 
 export default FileListView;

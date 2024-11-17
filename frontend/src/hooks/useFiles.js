@@ -1,7 +1,8 @@
 // src/hooks/useFiles.js
+
 import { useState, useEffect } from 'react';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { doc, updateDoc, addDoc, collection, query, where, getDocs, getDoc, writeBatch } from 'firebase/firestore';
+import { doc, updateDoc, addDoc, collection, query, where, getDocs, getDoc, writeBatch, deleteDoc } from 'firebase/firestore';
 import { db } from 'firebaseConfig';
 import uploadToStorage from 'src/utils/uploadToFirebaseStorage';
 import fileDownloadURL from 'utils/storage_download_via_url';
@@ -99,9 +100,12 @@ const useFiles = (currentDirectory) => {
         );
       }
 
+      console.log('Constructed Queries:', queries);
+
       const querySnapshots = await Promise.all(queries.map((q) => getDocs(q)));
       const fetchedFolders = [];
-      querySnapshots.forEach((snapshot) => {
+      querySnapshots.forEach((snapshot, index) => {
+        console.log(`Snapshot ${index + 1}:`, snapshot.empty ? 'No documents found' : `${snapshot.size} documents`);
         snapshot.forEach((doc) => {
           const data = doc.data();
           fetchedFolders.push({ id: doc.id, type: 'folder', ...data });
@@ -112,7 +116,134 @@ const useFiles = (currentDirectory) => {
       setFolders(fetchedFolders);
     } catch (error) {
       console.error('Ошибка при получении папок:', error);
-      toast.error('Не удалось получить папки');
+      toast.error(`Не удалось получить папки: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Функция для получения файлов из Firestore
+  const fetchFilesInFolder = async () => {
+    setIsLoading(true);
+    try {
+      const currentPath = currentDirectory || '/';
+      console.log('Fetching files for Group ID:', groupId);
+      console.log('Current Path:', currentPath);
+
+      const queries = [];
+
+      // Запрос для приватных файлов текущего пользователя
+      queries.push(
+        query(
+          collection(db, 'files'),
+          where('directory', '==', currentPath),
+          where('isDeleted', '==', false),
+          where('groupId', '==', null),
+          where('ownerId', '==', currentUser.uid)
+        )
+      );
+
+      // Запрос для файлов, доступных группе пользователя
+      if (groupId) {
+        queries.push(
+          query(
+            collection(db, 'files'),
+            where('directory', '==', currentPath),
+            where('isDeleted', '==', false),
+            where('groupId', '==', groupId)
+          )
+        );
+      }
+
+      console.log('Constructed Queries:', queries);
+
+      const querySnapshots = await Promise.all(queries.map((q) => getDocs(q)));
+      const fetchedFiles = [];
+      querySnapshots.forEach((snapshot, index) => {
+        console.log(`Snapshot ${index + 1}:`, snapshot.empty ? 'No documents found' : `${snapshot.size} documents`);
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          fetchedFiles.push({ id: doc.id, type: 'file', ...data });
+        });
+      });
+
+      console.log('Fetched Files:', fetchedFiles);
+      setFiles(fetchedFiles);
+    } catch (error) {
+      console.error('Ошибка при получении файлов:', error);
+      toast.error(`Не удалось получить файлы: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Рекурсивная функция для совместного использования папки и её содержимого
+  const shareFolderRecursively = async (folderPath, groupId, batch) => {
+    // Получаем все подпапки внутри текущей папки
+    const foldersQuery = query(collection(db, 'folders'), where('directory', '==', `${folderPath}/`), where('isDeleted', '==', false));
+
+    const foldersSnapshot = await getDocs(foldersQuery);
+
+    for (const docSnap of foldersSnapshot.docs) {
+      const subFolder = docSnap.data();
+      const subFolderRef = docSnap.ref;
+      batch.update(subFolderRef, { groupId: groupId });
+
+      const subFolderPath = `${subFolder.folderPath}/`;
+      // Рекурсивно делимся подпапками
+      await shareFolderRecursively(subFolderPath, groupId, batch);
+    }
+
+    // Получаем все файлы внутри текущей папки
+    const filesQuery = query(collection(db, 'files'), where('directory', '==', `${folderPath}/`), where('isDeleted', '==', false));
+
+    const filesSnapshot = await getDocs(filesQuery);
+
+    filesSnapshot.forEach((docSnap) => {
+      const fileRef = docSnap.ref;
+      batch.update(fileRef, { groupId: groupId });
+    });
+  };
+
+  // Функция для совместного использования папки с группой
+  const handleShareFolderToGroup = async (folder) => {
+    if (!currentUser) {
+      toast.error('Пользователь не авторизован. Пожалуйста, войдите в систему.');
+      return;
+    }
+
+    if (!groupId) {
+      toast.error('Пользователь не принадлежит ни одной группе.');
+      return;
+    }
+
+    if (folder.groupId === groupId) {
+      toast.info('Папка уже доступна вашей группе.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const batch = writeBatch(db);
+
+      // Обновляем groupId для самой папки
+      const folderRef = doc(db, 'folders', folder.id);
+      batch.update(folderRef, { groupId: groupId });
+
+      // Рекурсивно обновляем groupId для всех вложенных папок и файлов
+      await shareFolderRecursively(folder.folderPath, groupId, batch);
+
+      // Выполняем пакетное обновление
+      await batch.commit();
+
+      // Обновляем локальное состояние
+      await fetchFolders();
+      await fetchFilesInFolder();
+
+      toast.success(`Папка "${folder.name}" успешно поделена с вашей группой.`);
+    } catch (error) {
+      console.error('Ошибка при совместном использовании папки:', error);
+      toast.error(`Не удалось поделиться папкой: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -173,167 +304,17 @@ const useFiles = (currentDirectory) => {
       await batch.commit();
 
       // Обновляем локальное состояние
-      await fetchFolders(currentUser.uid);
-      await fetchFilesInFolder(currentUser.uid, currentDirectory);
+      await fetchFolders();
+      await fetchFilesInFolder();
 
       toast.success(`Доступ к папке "${folder.name}" закрыт для группы.`);
     } catch (error) {
       console.error('Ошибка при закрытии доступа к папке:', error);
-      toast.error('Ошибка при закрытии доступа к папке.');
+      toast.error(`Не удалось закрыть доступ к папке: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
   };
-
-  // Функция для получения файлов из Firestore
-  const fetchFilesInFolder = async () => {
-    setIsLoading(true);
-    try {
-      const currentPath = currentDirectory || '/';
-      console.log('Fetching files for Group ID:', groupId);
-      console.log('Current Path:', currentPath);
-
-      const queries = [];
-
-      // Запрос для приватных файлов текущего пользователя
-      queries.push(
-        query(
-          collection(db, 'files'),
-          where('directory', '==', currentPath),
-          where('isDeleted', '==', false),
-          where('groupId', '==', null),
-          where('ownerId', '==', currentUser.uid)
-        )
-      );
-
-      // Запрос для файлов, доступных группе пользователя
-      if (groupId) {
-        queries.push(
-          query(
-            collection(db, 'files'),
-            where('directory', '==', currentPath),
-            where('isDeleted', '==', false),
-            where('groupId', '==', groupId)
-          )
-        );
-      }
-
-      const querySnapshots = await Promise.all(queries.map((q) => getDocs(q)));
-      const fetchedFiles = [];
-      querySnapshots.forEach((snapshot) => {
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          fetchedFiles.push({ id: doc.id, type: 'file', ...data });
-        });
-      });
-
-      console.log('Fetched Files:', fetchedFiles);
-      setFiles(fetchedFiles);
-    } catch (error) {
-      console.error('Ошибка при получении файлов:', error);
-      toast.error('Не удалось получить файлы');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const shareFolderRecursively = async (folderPath, groupId, batch) => {
-    const queue = [folderPath];
-
-    while (queue.length > 0) {
-      const currentPath = queue.shift();
-
-      // Обновляем текущую папку
-      const foldersQuery = query(collection(db, 'folders'), where('directory', '==', `${currentPath}/`), where('isDeleted', '==', false));
-
-      const foldersSnapshot = await getDocs(foldersQuery);
-
-      foldersSnapshot.forEach((docSnap) => {
-        const subFolder = docSnap.data();
-        const subFolderRef = docSnap.ref;
-        batch.update(subFolderRef, { groupId: groupId });
-
-        const subFolderPath = `${subFolder.folderPath}/`;
-        queue.push(subFolderPath);
-      });
-
-      // Обновляем файлы в текущей папке
-      const filesQuery = query(collection(db, 'files'), where('directory', '==', `${currentPath}/`), where('isDeleted', '==', false));
-
-      const filesSnapshot = await getDocs(filesQuery);
-
-      filesSnapshot.forEach((docSnap) => {
-        const fileRef = docSnap.ref;
-        batch.update(fileRef, { groupId: groupId });
-      });
-    }
-  };
-
-  // Функция для совместного использования папки с группой
-  // Функция для совместного использования папки с группой
-  const handleShareFolderToGroup = async (folder) => {
-    if (!currentUser) {
-      toast.error('Пользователь не авторизован. Пожалуйста, войдите в систему.');
-      return;
-    }
-
-    if (!groupId) {
-      toast.error('Пользователь не принадлежит ни одной группе.');
-      return;
-    }
-
-    if (folder.groupId === groupId) {
-      toast.info('Папка уже доступна вашей группе.');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const batch = writeBatch(db);
-
-      // Обновляем groupId для самой папки
-      const folderRef = doc(db, 'folders', folder.id);
-      batch.update(folderRef, { groupId: groupId });
-
-      // Рекурсивно обновляем groupId для всех вложенных папок и файлов
-      await shareFolderRecursively(folder.folderPath, groupId, batch);
-
-      // Выполняем пакетное обновление
-      await batch.commit();
-
-      // Обновляем локальное состояние
-      await fetchFolders(currentUser.uid);
-      await fetchFilesInFolder(currentUser.uid, currentDirectory);
-      await fetchCurrentFolderGroupId(currentDirectory); // Добавлено для обновления groupId текущей папки
-
-      toast.success(`Папка "${folder.name}" успешно поделена с вашей группой.`);
-    } catch (error) {
-      console.error('Ошибка при совместном использовании папки:', error);
-      toast.error('Ошибка при совместном использовании папки с группой.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Инициализация слушателя аутентификации и загрузка данных
-  useEffect(() => {
-    const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setCurrentUser(user);
-        await fetchFolders(user.uid);
-        await fetchFilesInFolder(user.uid, currentDirectory);
-      } else {
-        console.warn('Пользователь не авторизован');
-        setFolders([]);
-        setFiles([]);
-        setCurrentUser(null);
-        setGroupId(null);
-      }
-    });
-
-    return () => unsubscribe();
-  }, [currentDirectory]);
 
   // Функция для создания папки
   const handleCreateFolder = async (folderName, currentDirectory) => {
@@ -371,13 +352,12 @@ const useFiles = (currentDirectory) => {
       toast.success(`Папка "${folderName}" успешно создана`);
     } catch (error) {
       console.error('Ошибка при создании папки:', error);
-      toast.error('Ошибка при создании папки');
+      toast.error(`Не удалось создать папку: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Функция загрузки файлов
   // Функция загрузки файлов
   const handleUploadFile = async (file, currentDirectory) => {
     if (!currentUser) {
@@ -388,9 +368,6 @@ const useFiles = (currentDirectory) => {
     setIsLoading(true);
     try {
       const { downloadURL, filePath } = await uploadToStorage(file, currentDirectory);
-
-      // Получаем groupId текущей папки
-      const folderGroupId = currentFolderGroupId; // Используем состояние
       const newFile = {
         name: file.name,
         size: file.size,
@@ -402,7 +379,7 @@ const useFiles = (currentDirectory) => {
         isDeleted: false,
         deletedAt: null,
         type: 'file',
-        groupId: folderGroupId // Устанавливаем groupId исходя из папки
+        groupId: null // Изначально файл приватный
       };
 
       const docRef = await addDoc(collection(db, 'files'), newFile);
@@ -412,7 +389,7 @@ const useFiles = (currentDirectory) => {
       toast.success('Файл успешно загружен!');
     } catch (error) {
       console.error('Ошибка при загрузке файла:', error);
-      toast.error('Ошибка при загрузке файла!');
+      toast.error(`Не удалось загрузить файл: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -431,7 +408,7 @@ const useFiles = (currentDirectory) => {
       document.body.removeChild(link);
     } catch (error) {
       console.error('Ошибка при скачивании файла:', error);
-      toast.error('Ошибка при скачивании файла');
+      toast.error(`Не удалось скачать файл: ${error.message}`);
     }
   };
 
@@ -442,7 +419,7 @@ const useFiles = (currentDirectory) => {
       toast.success('Ссылка скопирована в буфер обмена');
     } catch (err) {
       console.error('Ошибка при копировании ссылки:', err);
-      toast.error('Ошибка при копировании ссылки');
+      toast.error(`Не удалось скопировать ссылку: ${err.message}`);
     }
   };
 
@@ -484,7 +461,7 @@ const useFiles = (currentDirectory) => {
       toast.success('Папки перемещены в корзину');
     } catch (error) {
       console.error('Ошибка при удалении папок:', error);
-      toast.error('Ошибка при удалении папок');
+      toast.error(`Не удалось удалить папки: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -524,7 +501,125 @@ const useFiles = (currentDirectory) => {
       toast.success('Файлы перемещены в корзину');
     } catch (error) {
       console.error('Ошибка при удалении файлов:', error);
-      toast.error('Ошибка при удалении файлов');
+      toast.error(`Не удалось удалить файлы: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Функция для восстановления папки из корзины
+  const handleRestoreFolder = async (folder) => {
+    if (!currentUser) {
+      toast.error('Пользователь не авторизован.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const folderRef = doc(db, 'folders', folder.id);
+      await updateDoc(folderRef, {
+        isDeleted: false,
+        deletedAt: null
+      });
+
+      // Обновляем локальное состояние
+      setFolders((prevFolders) => prevFolders.filter((f) => f.id !== folder.id));
+      toast.success(`Папка "${folder.name}" восстановлена`);
+    } catch (error) {
+      console.error('Ошибка при восстановлении папки:', error);
+      toast.error(`Не удалось восстановить папку: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Функция для восстановления файла из корзины
+  const handleRestoreFile = async (file) => {
+    if (!currentUser) {
+      toast.error('Пользователь не авторизован.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const fileRef = doc(db, 'files', file.id);
+      await updateDoc(fileRef, {
+        isDeleted: false,
+        deletedAt: null
+      });
+
+      // Обновляем локальное состояние
+      setFiles((prevFiles) => prevFiles.filter((f) => f.id !== file.id));
+      toast.success(`Файл "${file.name}" восстановлен`);
+    } catch (error) {
+      console.error('Ошибка при восстановлении файла:', error);
+      toast.error(`Не удалось восстановить файл: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Функция для окончательного удаления папок
+  const handlePermanentDeleteFolders = async (foldersToDelete) => {
+    if (!currentUser) {
+      toast.error('Пользователь не авторизован.');
+      return;
+    }
+
+    if (foldersToDelete.length === 0) {
+      toast.warn('Не выбрано ни одной папки для удаления');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await Promise.all(
+        foldersToDelete.map(async (folder) => {
+          // Окончательное удаление папки
+          const folderRef = doc(db, 'folders', folder.id);
+          await deleteDoc(folderRef);
+
+          // Удаление папки из состояния
+          setFolders((prevFolders) => prevFolders.filter((f) => f.id !== folder.id));
+        })
+      );
+      toast.success('Папки удалены навсегда');
+    } catch (error) {
+      console.error('Ошибка при окончательном удалении папок:', error);
+      toast.error(`Не удалось удалить папки: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Функция для окончательного удаления файлов
+  const handlePermanentDeleteFiles = async (filesToDelete) => {
+    if (!currentUser) {
+      toast.error('Пользователь не авторизован.');
+      return;
+    }
+
+    if (filesToDelete.length === 0) {
+      toast.warn('Не выбрано ни одного файла для удаления');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await Promise.all(
+        filesToDelete.map(async (file) => {
+          // Окончательное удаление файла
+          const fileRef = doc(db, 'files', file.id);
+          await deleteDoc(fileRef);
+
+          // Удаление файла из состояния
+          setFiles((prevFiles) => prevFiles.filter((f) => f.id !== file.id));
+        })
+      );
+      toast.success('Файлы удалены навсегда');
+    } catch (error) {
+      console.error('Ошибка при окончательном удалении файлов:', error);
+      toast.error(`Не удалось удалить файлы: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -542,6 +637,10 @@ const useFiles = (currentDirectory) => {
     handleCreateFolder,
     handleShareFolderToGroup,
     handleUnshareFolderFromGroup,
+    handleRestoreFolder,
+    handleRestoreFile,
+    handlePermanentDeleteFolders,
+    handlePermanentDeleteFiles,
     currentUser
   };
 };
