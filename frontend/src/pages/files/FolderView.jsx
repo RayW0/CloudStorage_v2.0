@@ -1,12 +1,27 @@
+// src/components/FolderView.js
 import React, { useState, useEffect } from 'react';
 import { db } from 'firebaseConfig';
 import { collection, addDoc, query, where, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
-import { Button, TextField, Dialog, DialogActions, DialogContent, DialogTitle, Typography, List, ListItem, ListItemText, IconButton } from '@mui/material';
+import {
+  Button,
+  TextField,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Typography,
+  List,
+  ListItem,
+  ListItemText,
+  IconButton
+} from '@mui/material';
 import { ArrowBack, Folder, FileUpload } from '@mui/icons-material';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { toast } from 'react-toastify';
+import { useAuth } from 'contexts/AuthContext'; // Убедитесь, что путь корректный
 
 export default function FolderView() {
+  const { currentUser, userData } = useAuth(); // Получаем текущего пользователя и его данные
   const [currentFolderId, setCurrentFolderId] = useState(null); // ID текущей папки
   const [folders, setFolders] = useState([]);
   const [files, setFiles] = useState([]);
@@ -16,33 +31,76 @@ export default function FolderView() {
 
   useEffect(() => {
     fetchFolders();
-  }, [currentFolderId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentFolderId, userData]);
 
   const fetchFolders = async () => {
-    // Получаем папки
-    const folderQuery = query(collection(db, 'folders'), where('parentId', '==', currentFolderId));
-    const folderDocs = await getDocs(folderQuery);
-    const fetchedFolders = folderDocs.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    setFolders(fetchedFolders);
+    if (!userData) {
+      setFolders([]);
+      setFiles([]);
+      return;
+    }
 
-    // Получаем файлы в текущей папке, если у текущей папки есть ID
-    if (currentFolderId) {
-      const currentFolderDoc = await getDoc(doc(db, 'folders', currentFolderId));
-      if (currentFolderDoc.exists()) {
-        setFiles(currentFolderDoc.data()?.files || []);
+    try {
+      let groupId = userData.groupId || null;
+
+      // Создаем массив условий для запроса
+      const folderConditions = [];
+
+      if (groupId) {
+        folderConditions.push(where('groupId', '==', groupId));
       }
-    } else {
-      setFiles([]); // Корневая папка
+      folderConditions.push(where('groupId', '==', null));
+
+      // Firestore не поддерживает OR-запросы напрямую, поэтому выполняем два отдельных запроса
+      let fetchedFolders = [];
+
+      if (groupId) {
+        const groupQuery = query(collection(db, 'folders'), where('parentId', '==', currentFolderId), where('groupId', '==', groupId));
+        const groupSnapshot = await getDocs(groupQuery);
+        groupSnapshot.forEach((doc) => {
+          fetchedFolders.push({ id: doc.id, ...doc.data() });
+        });
+      }
+
+      // Публичные папки
+      const publicQuery = query(collection(db, 'folders'), where('parentId', '==', currentFolderId), where('groupId', '==', null));
+      const publicSnapshot = await getDocs(publicQuery);
+      publicSnapshot.forEach((doc) => {
+        fetchedFolders.push({ id: doc.id, ...doc.data() });
+      });
+
+      setFolders(fetchedFolders);
+
+      // Получаем файлы в текущей папке, если у текущей папки есть ID
+      if (currentFolderId) {
+        const currentFolderDoc = await getDoc(doc(db, 'folders', currentFolderId));
+        if (currentFolderDoc.exists()) {
+          setFiles(currentFolderDoc.data()?.files || []);
+        }
+      } else {
+        setFiles([]); // Корневая папка (можно настроить по необходимости)
+      }
+    } catch (error) {
+      console.error('Ошибка при получении папок:', error);
+      toast.error('Не удалось получить папки');
     }
   };
 
   const handleCreateFolder = async () => {
     if (!newFolderName) return;
+    if (!userData) {
+      toast.error('Пользователь не аутентифицирован');
+      return;
+    }
+
     try {
       await addDoc(collection(db, 'folders'), {
         name: newFolderName,
         parentId: currentFolderId,
-        files: []
+        groupId: userData.groupId || null, // Папка принадлежит группе пользователя или публичная
+        files: [],
+        createdAt: new Date()
       });
       toast.success('Папка создана успешно!');
       setOpenNewFolderDialog(false);
@@ -57,15 +115,28 @@ export default function FolderView() {
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
+    if (!userData) {
+      toast.error('Пользователь не аутентифицирован');
+      return;
+    }
 
     try {
-      const fileRef = ref(storage, `uploads/${currentFolderId || 'root'}/${file.name}`);
+      const folderPath = currentFolderId ? `folders/${currentFolderId}` : `folders/root`;
+      const fileRef = ref(storage, `${folderPath}/${file.name}`);
       await uploadBytes(fileRef, file);
       const url = await getDownloadURL(fileRef);
 
       const folderRef = doc(db, 'folders', currentFolderId || 'rootFolder');
       await updateDoc(folderRef, {
-        files: [...files, { name: file.name, url, size: file.size, lastModified: file.lastModified }]
+        files: [
+          ...(files || []),
+          {
+            name: file.name,
+            url,
+            size: file.size,
+            lastModified: file.lastModified
+          }
+        ]
       });
 
       toast.success('Файл загружен успешно!');
@@ -80,17 +151,29 @@ export default function FolderView() {
     setCurrentFolderId(folderId);
   };
 
-  const navigateBack = () => {
+  const navigateBack = async () => {
     if (currentFolderId) {
-      // Получаем данные текущей папки и возвращаемся на уровень вверх
-      const parentFolder = folders.find(folder => folder.id === currentFolderId)?.parentId || null;
-      setCurrentFolderId(parentFolder);
+      try {
+        const currentFolderDoc = await getDoc(doc(db, 'folders', currentFolderId));
+        if (currentFolderDoc.exists()) {
+          const parentId = currentFolderDoc.data().parentId || null;
+          setCurrentFolderId(parentId);
+        } else {
+          console.error('Документ текущей папки не найден');
+          setCurrentFolderId(null);
+        }
+      } catch (error) {
+        console.error('Ошибка при навигации назад:', error);
+        toast.error('Не удалось вернуться назад');
+      }
     }
   };
 
   return (
-    <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
-      <Typography variant="h4" gutterBottom>Файловый менеджер</Typography>
+    <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
+      <Typography variant="h4" gutterBottom>
+        Файловый менеджер
+      </Typography>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
         <Button variant="outlined" startIcon={<ArrowBack />} onClick={navigateBack} disabled={!currentFolderId}>
@@ -99,12 +182,7 @@ export default function FolderView() {
         <Button variant="outlined" startIcon={<Folder />} onClick={() => setOpenNewFolderDialog(true)}>
           Создать папку
         </Button>
-        <input
-          type="file"
-          style={{ display: 'none' }}
-          id="file-upload"
-          onChange={handleFileUpload}
-        />
+        <input type="file" style={{ display: 'none' }} id="file-upload" onChange={handleFileUpload} />
         <label htmlFor="file-upload">
           <Button variant="outlined" startIcon={<FileUpload />} component="span">
             Загрузить файл
@@ -113,13 +191,13 @@ export default function FolderView() {
       </div>
 
       <List>
-        {folders.map(folder => (
+        {folders.map((folder) => (
           <ListItem key={folder.id} button onClick={() => navigateToFolder(folder.id)}>
             <Folder style={{ marginRight: '10px' }} />
             <ListItemText primary={folder.name} />
           </ListItem>
         ))}
-        {files.map(file => (
+        {files.map((file) => (
           <ListItem key={file.name}>
             <ListItemText
               primary={file.name}

@@ -7,8 +7,6 @@ import Trash from 'pages/files/Trash';
 
 // render - login
 const MyFiles = Loadable(lazy(() => import('pages/files/myfiles')));
-const FolderView = Loadable(lazy(() => import('pages/files/FolderView')));
-
 // ==============================|| AUTH ROUTING ||============================== //
 
 const FilesRoutes = {
@@ -18,10 +16,6 @@ const FilesRoutes = {
     {
       path: '/files',
       element: <MyFiles />
-    },
-    {
-      path: '/folder',
-      element: <FolderView />
     },
     {
       path: '/trash',

@@ -59,7 +59,7 @@ const useRegister = (navigate) => {
           role: 'user',
           isEmailVerified: false,
           createdAt: new Date().toISOString(),
-          groupId: 'none'
+          groupId: null
         });
 
         alert('Пожалуйста, проверьте вашу почту и подтвердите свой email для завершения регистрации.');

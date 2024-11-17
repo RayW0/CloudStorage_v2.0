@@ -1,20 +1,18 @@
 // src/hooks/useSort.js
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 
-const useSort = (files, sortField, sortOrder) => {
-  const sortedFiles = useMemo(() => {
-    return [...files].sort((a, b) => {
-      if (a[sortField] < b[sortField]) {
-        return sortOrder === "asc" ? -1 : 1;
-      }
-      if (a[sortField] > b[sortField]) {
-        return sortOrder === "asc" ? 1 : -1;
-      }
+const useSort = (items, field, order) => {
+  return useMemo(() => {
+    if (!Array.isArray(items)) {
+      console.warn('useSort: items is not an array', items);
+      return [];
+    }
+    return [...items].sort((a, b) => {
+      if (a[field] < b[field]) return order === 'asc' ? -1 : 1;
+      if (a[field] > b[field]) return order === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [files, sortField, sortOrder]);
-
-  return sortedFiles;
+  }, [items, field, order]);
 };
 
 export default useSort;
