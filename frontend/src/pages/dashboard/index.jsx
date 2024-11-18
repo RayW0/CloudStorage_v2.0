@@ -4,11 +4,12 @@ import { useState, useEffect } from 'react';
 import MainCard from 'components/MainCard';
 import useUserProfile from 'hooks/useUserProfile';
 import DashboardWidget from 'components/DashboardWidget';
+import WeatherWidget from 'components/WeatherWidget';
 import { Grid, Typography, Stack } from '@mui/material';
 import { FileOutlined, UserOutlined } from '@ant-design/icons';
 import StatusButton from 'components/StatusButton';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { db } from 'firebaseConfig';
+import { CloudOutlined } from '@ant-design/icons';
+
 
 // avatar style
 const avatarSX = {
@@ -55,22 +56,10 @@ export default function DashboardDefault() {
         </Typography>
         <StatusButton initialStatus={userStatus} />
       </Stack>
-
       {/* Виджеты */}
       <Grid container spacing={3}>
         <Grid item xs={12} sm={6} md={3}>
-          <DashboardWidget
-            title="Пользователи"
-            value={userCount}
-            icon={<UserOutlined />}
-            change={5.4}
-            link="/users"
-            extraInfo="Всего пользователей"
-            progress={75}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <DashboardWidget
+        <DashboardWidget
             title="Файлы"
             value="0"
             icon={<FileOutlined />}
@@ -79,6 +68,14 @@ export default function DashboardDefault() {
             extraInfo="Изменение за месяц"
             progress={40}
           />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+        <WeatherWidget 
+          location="Алматы"
+          temperature= "7"
+          condition = "Cloudy"
+          icon={<CloudOutlined />}
+          link="/home"/>
         </Grid>
       </Grid>
     </MainCard>

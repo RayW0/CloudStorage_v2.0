@@ -3,25 +3,12 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { useNavigate } from 'react-router-dom';
-import { CardContent, Typography, Stack, Tooltip, LinearProgress, Grow, useTheme, Box, Badge } from '@mui/material';
-import { FileOutlined, ArrowUpOutlined, ArrowDownOutlined, UserOutlined, DollarOutlined, InfoOutlined } from '@ant-design/icons';
-import MainCard from './MainCard'; // Предполагается, что MainCard настроен для использования с MUI
-import { styled } from '@mui/system';
+import { CardContent, Typography, Stack, Grow, useTheme, Box, Avatar, CardActions, Button, LinearProgress } from '@mui/material';
+import { FileOutlined, ArrowUpOutlined, ArrowDownOutlined, InfoOutlined } from '@ant-design/icons';
+import MainCard from './MainCard';
 
 /**
- * StyledBadge - Настроенный компонент Badge для отображения статуса
- */
-const StyledBadge = styled(Badge)(({ theme }) => ({
-  '& .MuiBadge-badge': {
-    right: -3,
-    top: 13,
-    border: `2px solid ${theme.palette.background.paper}`,
-    padding: '0 4px'
-  }
-}));
-
-/**
- * DashboardWidget - Улучшенный виджет для отображения информации на главной странице
+ * DashboardWidget - Улучшенный виджет с новым дизайном для отображения информации на главной странице
  *
  * @param {string} title - Заголовок виджета
  * @param {string|number} value - Основное значение для отображения
@@ -37,100 +24,109 @@ export default function DashboardWidget({ title, value, icon, change, link, extr
 
   const isPositive = change > 0;
   const changeColor = isPositive ? theme.palette.success.main : theme.palette.error.main;
-  const valueColor =
-    typeof value === 'number' ? (value >= 0 ? theme.palette.success.main : theme.palette.error.main) : theme.palette.text.primary;
-
-  const iconColor = theme.palette.mode === 'dark' ? '#fff' : '#1890ff';
+  const valueColor = theme.palette.text.primary;
+  const iconColor = theme.palette.primary.main;
 
   return (
     <Grow in>
       <MainCard
         sx={{
           minWidth: { xs: '100%', sm: 275 },
-          maxWidth: 300,
+          maxWidth: 350,
           mb: 3,
           cursor: 'pointer',
           transition: 'transform 0.3s, box-shadow 0.3s',
           '&:hover': {
-            transform: 'scale(1.05)',
-            boxShadow: theme.shadows[6]
+            transform: 'translateY(-5px)',
+            boxShadow: theme.shadows[8]
           },
-          position: 'relative'
+          borderRadius: 4,
+          position: 'relative',
+          background: `linear-gradient(135deg, ${theme.palette.grey[100]} 30%, ${theme.palette.grey[400]} 100%)`,
+          color: theme.palette.text.primary,
+          overflow: 'hidden'
         }}
         onClick={() => navigate(link)}
         elevation={3}
       >
-        {/* Индикатор статуса */}
-        <StyledBadge
-          badgeContent=" "
-          variant="dot"
-          color={isPositive ? 'success' : 'error'}
-          sx={{ position: 'absolute', top: 16, right: 16 }}
-        />
-
         <CardContent>
-          <Stack direction="row" spacing={2} alignItems="center">
-            <Box
-              sx={{
-                fontSize: 50,
-                color: iconColor,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              {icon || <FileOutlined />}
-            </Box>
-            <Stack spacing={1} flex={1}>
-              <Typography variant="subtitle1" color="text.secondary" sx={{ fontWeight: 'bold' }}>
-                {title}
-                <Tooltip title="Информация о виджете">
-                  <InfoOutlined style={{ marginLeft: 4, fontSize: '16px', cursor: 'pointer' }} />
-                </Tooltip>
-              </Typography>
-              <Tooltip title="Обновлено 5 минут назад">
-                <Typography variant="h4" sx={{ color: valueColor, fontWeight: 'bold' }}>
+          <Stack direction="column" spacing={2} alignItems="flex-start">
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Avatar
+                sx={{
+                  bgcolor: theme.palette.common.white,
+                  color: theme.palette.grey[800],
+                  width: 56,
+                  height: 56,
+                  boxShadow: theme.shadows[2]
+                }}
+              >
+                {icon || <FileOutlined style={{ fontSize: 28 }} />}
+              </Avatar>
+              <Stack spacing={0.5}>
+                <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+                  {title}
+                </Typography>
+                <Typography variant="h4" sx={{ fontWeight: 'bold', lineHeight: 1.2 }}>
                   {value}
                 </Typography>
-              </Tooltip>
-              {typeof change === 'number' && (
-                <Stack direction="row" alignItems="center" spacing={0.5}>
-                  {isPositive ? <ArrowUpOutlined style={{ color: changeColor }} /> : <ArrowDownOutlined style={{ color: changeColor }} />}
-                  <Typography variant="body2" sx={{ color: changeColor, fontWeight: 'medium' }}>
-                    {Math.abs(change)}%
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {isPositive ? 'увеличение' : 'уменьшение'}
-                  </Typography>
-                </Stack>
-              )}
-              {progress !== undefined && (
-                <Box sx={{ mt: 1 }}>
-                  <LinearProgress
-                    variant="determinate"
-                    value={progress}
-                    sx={{
-                      height: 8,
-                      borderRadius: 5,
-                      backgroundColor: theme.palette.grey[300],
-                      '& .MuiLinearProgress-bar': {
-                        backgroundColor: theme.palette.primary.main
-                      }
-                    }}
-                  />
-                  <Typography variant="caption" color="text.secondary">
-                    Завершено: {progress}%
-                  </Typography>
-                </Box>
-              )}
-              {extraInfo && (
-                <Typography variant="body2" color="text.secondary">
-                  {extraInfo}
-                </Typography>
-              )}
+              </Stack>
             </Stack>
+
+            {typeof change === 'number' && (
+              <Stack direction="row" alignItems="center" spacing={1}>
+                {isPositive ? (
+                  <ArrowUpOutlined style={{ color: changeColor }} />
+                ) : (
+                  <ArrowDownOutlined style={{ color: changeColor }} />
+                )}
+                <Typography variant="body2" sx={{ color: changeColor, fontWeight: 'medium' }}>
+                  {Math.abs(change)}%
+                </Typography>
+                <Typography variant="body1" sx={{ opacity: 0.8 }}>
+                  {isPositive ? 'увеличение' : 'уменьшение'}
+                </Typography>
+              </Stack>
+            )}
+
+            {progress !== undefined && (
+              <Box sx={{ width: '100%' }}>
+                <LinearProgress
+                  variant="determinate"
+                  value={progress}
+                  sx={{
+                    height: 10,
+                    borderRadius: 5,
+                    backgroundColor: theme.palette.grey[100],
+                    '& .MuiLinearProgress-bar': {
+                      backgroundColor: theme.palette.grey[700]
+                    }
+                  }}
+                />
+                <Typography variant="body
+                2" sx={{ mt: 1, color: theme.palette.text.secondary }}>
+                  Завершено: {progress}%
+                </Typography>
+              </Box>
+            )}
           </Stack>
         </CardContent>
+        <CardActions sx={{ justifyContent: 'flex-end', paddingRight: 2, paddingBottom: 1 }}>
+          <Button
+            size="small"
+            sx={{
+              color: theme.palette.grey[700],
+              borderColor: theme.palette.grey[700],
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.05)'
+              }
+            }}
+            variant="outlined"
+            onClick={() => navigate(link)}
+          >
+            Подробнее
+          </Button>
+        </CardActions>
       </MainCard>
     </Grow>
   );
@@ -147,9 +143,9 @@ DashboardWidget.propTypes = {
 };
 
 DashboardWidget.defaultProps = {
-  icon: <FileOutlined />,
+  icon: <FileOutlined />, 
   change: 0,
-  link: '/',
+  link: '/files',
   extraInfo: '',
   progress: undefined
 };
