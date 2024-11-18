@@ -49,7 +49,7 @@ export default function WeatherWidget({ location, temperature, condition, icon, 
                   color: theme.palette.primary.main,
                   width: 56,
                   height: 56,
-                  boxShadow: theme.shadows[4]
+                  boxShadow: theme.shadows[2]
                 }}
               >
                 {icon || <CloudOutlined style={{ fontSize: 28 }} />}
@@ -57,7 +57,6 @@ export default function WeatherWidget({ location, temperature, condition, icon, 
               <Stack spacing={0.5}>
                 <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
                   {location}
-                  
                 </Typography>
                 <Typography variant="h3" sx={{ fontWeight: 'bold', lineHeight: 1.2 }}>
                   {temperature}&deg;C

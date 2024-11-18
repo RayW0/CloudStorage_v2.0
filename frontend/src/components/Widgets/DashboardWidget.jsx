@@ -24,8 +24,6 @@ export default function DashboardWidget({ title, value, icon, change, link, extr
 
   const isPositive = change > 0;
   const changeColor = isPositive ? theme.palette.success.main : theme.palette.error.main;
-  const valueColor = theme.palette.text.primary;
-  const iconColor = theme.palette.primary.main;
 
   return (
     <Grow in>
@@ -42,7 +40,7 @@ export default function DashboardWidget({ title, value, icon, change, link, extr
           },
           borderRadius: 4,
           position: 'relative',
-          background: `linear-gradient(135deg, ${theme.palette.grey[100]} 30%, ${theme.palette.grey[400]} 100%)`,
+          background: `linear-gradient(135deg, ${theme.palette.grey[100]} 30%, ${theme.palette.grey[300]} 100%)`,
           color: theme.palette.text.primary,
           overflow: 'hidden'
         }}
@@ -55,19 +53,19 @@ export default function DashboardWidget({ title, value, icon, change, link, extr
               <Avatar
                 sx={{
                   bgcolor: theme.palette.common.white,
-                  color: theme.palette.grey[800],
+                  color: theme.palette.primary.main,
                   width: 56,
                   height: 56,
                   boxShadow: theme.shadows[2]
                 }}
               >
-                {icon || <FileOutlined style={{ fontSize: 28 }} />}
+                {icon || <FileOutlined style={{ fontSize: 28, color: theme.palette.primary.main }} />}
               </Avatar>
               <Stack spacing={0.5}>
                 <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
                   {title}
                 </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 'bold', lineHeight: 1.2 }}>
+                <Typography variant="h3" sx={{ fontWeight: 'bold', color: theme.palette.primary.main, lineHeight: 1.2 }}>
                   {value}
                 </Typography>
               </Stack>
@@ -75,11 +73,7 @@ export default function DashboardWidget({ title, value, icon, change, link, extr
 
             {typeof change === 'number' && (
               <Stack direction="row" alignItems="center" spacing={1}>
-                {isPositive ? (
-                  <ArrowUpOutlined style={{ color: changeColor }} />
-                ) : (
-                  <ArrowDownOutlined style={{ color: changeColor }} />
-                )}
+                {isPositive ? <ArrowUpOutlined style={{ color: changeColor }} /> : <ArrowDownOutlined style={{ color: changeColor }} />}
                 <Typography variant="body2" sx={{ color: changeColor, fontWeight: 'medium' }}>
                   {Math.abs(change)}%
                 </Typography>
@@ -99,12 +93,15 @@ export default function DashboardWidget({ title, value, icon, change, link, extr
                     borderRadius: 5,
                     backgroundColor: theme.palette.grey[100],
                     '& .MuiLinearProgress-bar': {
-                      backgroundColor: theme.palette.grey[700]
+                      backgroundColor: theme.palette.primary
                     }
                   }}
                 />
-                <Typography variant="body
-                2" sx={{ mt: 1, color: theme.palette.text.secondary }}>
+                <Typography
+                  variant="body
+                2"
+                  sx={{ mt: 1, color: theme.palette.text.secondary }}
+                >
                   Завершено: {progress}%
                 </Typography>
               </Box>
@@ -115,10 +112,10 @@ export default function DashboardWidget({ title, value, icon, change, link, extr
           <Button
             size="small"
             sx={{
-              color: theme.palette.grey[700],
-              borderColor: theme.palette.grey[700],
+              color: theme.palette.primary.main,
+              borderColor: theme.palette.primary.main,
               '&:hover': {
-                backgroundColor: 'rgba(0, 0, 0, 0.05)'
+                backgroundColor: 'rgba(0, 0, 255, 0.05)'
               }
             }}
             variant="outlined"
@@ -143,7 +140,7 @@ DashboardWidget.propTypes = {
 };
 
 DashboardWidget.defaultProps = {
-  icon: <FileOutlined />, 
+  icon: <FileOutlined />,
   change: 0,
   link: '/files',
   extraInfo: '',

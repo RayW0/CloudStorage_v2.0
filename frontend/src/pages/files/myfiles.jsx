@@ -15,22 +15,9 @@ import {
   CircularProgress,
   Grid,
   Box,
-  Avatar,
   Tooltip
 } from '@mui/material';
-import {
-  DownloadOutlined,
-  DeleteOutlined,
-  FolderOutlined,
-  FileOutlined,
-  LinkOutlined,
-  ShareAltOutlined, // Импортируем иконку для совместного использования
-  FilePdfOutlined,
-  FileWordOutlined,
-  FileExcelOutlined,
-  FileTextOutlined,
-  FileZipOutlined
-} from '@ant-design/icons';
+import { DownloadOutlined, DeleteOutlined, ShareAltOutlined, LinkOutlined } from '@ant-design/icons';
 import MainCard from 'components/MainCard';
 import BreadcrumbsNav from 'components/@extended/BreadcrumbsNav';
 import SortControls from 'components/@extended/SortControls';
@@ -38,6 +25,7 @@ import FileActions from 'components/files/FileActions';
 import ViewModeToggle from 'components/@extended/ViewModeToggle';
 import useFiles from 'hooks/useFiles';
 import useSort from 'hooks/useSort';
+import GetFileIcon from 'utils/getFileIcon';
 
 const FileList = () => {
   // Определение состояния
@@ -76,9 +64,9 @@ const FileList = () => {
   // Логирование текущего состояния для отладки
   useEffect(() => {
     console.log('Current Directory in FileList:', currentDirectory);
-    console.log('Folders:', folders);
-    console.log('Files:', files);
-  }, [currentDirectory, folders, files]);
+    console.log('Sorted Folders:', sortedFolders);
+    console.log('Sorted Files:', sortedFiles);
+  }, [currentDirectory, sortedFolders, sortedFiles]);
 
   const handleSortFieldChange = (event) => {
     setSortField(event.target.value);
@@ -141,7 +129,7 @@ const FileList = () => {
     if (selectAll) {
       setSelectedItems([]);
     } else {
-      setSelectedItems(allItems);
+      setSelectedItems([...allItems]);
     }
     setSelectAll(!selectAll);
   };
@@ -157,36 +145,6 @@ const FileList = () => {
       date = new Date(timestamp);
     }
     return date.toLocaleString();
-  };
-
-  // Функция для получения иконки файла или папки
-  const getFileIcon = (item) => {
-    if (item.type === 'folder') {
-      return <FolderOutlined style={{ fontSize: 24 }} />;
-    }
-    const extension = item.name.split('.').pop().toLowerCase();
-    switch (extension) {
-      case 'jpg':
-      case 'jpeg':
-      case 'png':
-      case 'gif':
-        return <Avatar variant="square" src={item.downloadURL} alt={item.name} sx={{ width: 24, height: 24, mr: 1 }} />;
-      case 'pdf':
-        return <FilePdfOutlined style={{ fontSize: 24 }} />;
-      case 'zip':
-      case 'rar':
-        return <FileZipOutlined style={{ fontSize: 24 }} />;
-      case 'doc':
-      case 'docx':
-        return <FileWordOutlined style={{ fontSize: 24 }} />;
-      case 'xls':
-      case 'xlsx':
-        return <FileExcelOutlined style={{ fontSize: 24 }} />;
-      case 'txt':
-        return <FileTextOutlined style={{ fontSize: 24 }} />;
-      default:
-        return <FileOutlined style={{ fontSize: 24 }} />;
-    }
   };
 
   return (
@@ -281,7 +239,7 @@ const FileList = () => {
                       <ListItemText
                         primary={
                           <Stack direction="row" alignItems="center">
-                            {getFileIcon(folder)}
+                            <GetFileIcon file={folder} />
                             <Typography variant="body1" sx={{ ml: 1 }}>
                               {folder.name}
                             </Typography>
@@ -307,16 +265,18 @@ const FileList = () => {
                                   </IconButton>
                                 </Tooltip>
                               ) : (
-                                <IconButton
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleUnshareFolderFromGroup(folder);
-                                  }}
-                                  title="Закрыть доступ"
-                                  color="secondary"
-                                >
-                                  <ShareAltOutlined />
-                                </IconButton>
+                                <Tooltip title="Закрыть доступ">
+                                  <IconButton
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleUnshareFolderFromGroup(folder);
+                                    }}
+                                    title="Закрыть доступ"
+                                    color="secondary"
+                                  >
+                                    <ShareAltOutlined />
+                                  </IconButton>
+                                </Tooltip>
                               )}
                             </>
                           )}
@@ -356,7 +316,7 @@ const FileList = () => {
                       <ListItemText
                         primary={
                           <Stack direction="row" alignItems="center">
-                            {getFileIcon(file)}
+                            <GetFileIcon file={file} />
                             <Typography variant="body1" sx={{ ml: 1 }}>
                               {file.name}
                             </Typography>
@@ -422,7 +382,7 @@ const FileList = () => {
 
                       {/* Иконка и название папки */}
                       <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        {getFileIcon(folder)}
+                        <GetFileIcon file={folder} />
                         <Typography variant="body1" sx={{ ml: 1, wordBreak: 'break-all' }}>
                           {folder.name}
                         </Typography>
@@ -440,16 +400,18 @@ const FileList = () => {
                       <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
                         {/* Кнопка "Поделиться с группой" или статус */}
                         {folder.groupId === null && folder.ownerId === currentUser?.uid && (
-                          <IconButton
-                            onClick={(e) => {
-                              e.stopPropagation(); // Предотвращаем всплытие события
-                              handleShareFolderToGroup(folder);
-                            }}
-                            title="Поделиться с группой"
-                            color="primary"
-                          >
-                            <ShareAltOutlined />
-                          </IconButton>
+                          <Tooltip title="Поделиться с группой">
+                            <IconButton
+                              onClick={(e) => {
+                                e.stopPropagation(); // Предотвращаем всплытие события
+                                handleShareFolderToGroup(folder);
+                              }}
+                              title="Поделиться с группой"
+                              color="primary"
+                            >
+                              <ShareAltOutlined />
+                            </IconButton>
+                          </Tooltip>
                         )}
                         {folder.groupId !== null && (
                           <Typography variant="caption" color="textSecondary" sx={{ mt: 1 }}>
@@ -494,7 +456,7 @@ const FileList = () => {
 
                       {/* Иконка и название файла */}
                       <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        {getFileIcon(file)}
+                        <GetFileIcon file={file} />
                         <Typography variant="body1" sx={{ ml: 1, wordBreak: 'break-all' }}>
                           {file.name}
                         </Typography>
@@ -531,7 +493,6 @@ const FileList = () => {
                         >
                           <LinkOutlined />
                         </IconButton>
-                        <SimpleDropdown file={file} />
                       </Stack>
                     </Box>
                   </Grid>

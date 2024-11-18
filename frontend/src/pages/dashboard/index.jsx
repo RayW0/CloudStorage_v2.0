@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+// DashboardDefault.jsx
+import { useState, useEffect, useMemo } from 'react';
 
 // project import
 import MainCard from 'components/MainCard';
@@ -6,11 +7,11 @@ import useUserProfile from 'hooks/useUserProfile';
 import DashboardWidget from 'components/Widgets/DashboardWidget';
 import WeatherWidget from 'components/Widgets/WeatherWidget';
 import FilesWidget from 'components/Widgets/FilesWidget';
-import { Grid, Typography, Stack } from '@mui/material';
+import { Grid, Typography, Stack, CircularProgress } from '@mui/material';
 import { FileOutlined, UserOutlined } from '@ant-design/icons';
 import StatusButton from 'components/StatusButton';
 import { CloudOutlined } from '@ant-design/icons';
-
+import useFiles from 'hooks/useFiles';
 
 // avatar style
 const avatarSX = {
@@ -34,6 +35,11 @@ const actionSX = {
 export default function DashboardDefault() {
   const { userName, userStatus } = useUserProfile();
   const [userCount, setUserCount] = useState(0);
+  const [currentDirectory, setCurrentDirectory] = useState('/');
+  const [loadingFiles, setLoadingFiles] = useState(true);
+
+  const { files } = useFiles(currentDirectory);
+
   useEffect(() => {
     const fetchUserCount = async () => {
       try {
@@ -48,6 +54,18 @@ export default function DashboardDefault() {
     fetchUserCount();
   }, []);
 
+  useEffect(() => {
+    if (files) {
+      setLoadingFiles(false);
+    }
+  }, [files]);
+
+  // Используем useMemo для мемоизации отсортированных файлов
+  const latestFiveFiles = useMemo(() => {
+    if (!files) return [];
+    return [...files].sort((a, b) => new Date(b.uploadDate) - new Date(a.uploadDate)).slice(0, 5);
+  }, [files]);
+
   return (
     <MainCard sx={{ p: 4 }}>
       {/* Приветственный текст */}
@@ -58,11 +76,15 @@ export default function DashboardDefault() {
         <StatusButton initialStatus={userStatus} />
       </Stack>
       {/* Виджеты */}
-      <Grid container spacing={3}>
+
+      <Grid container spacing={{ xs: 2, md: 3 }} columns={{ xs: 4, sm: 8, md: 12 }}>
         <Grid item xs={12} sm={6} md={3}>
-        <DashboardWidget
+          <WeatherWidget location="Алматы" temperature="7" condition="Cloudy" icon={<CloudOutlined />} link="/home" />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <DashboardWidget
             title="Файлы"
-            value="0"
+            value={files ? files.length : 0}
             icon={<FileOutlined />}
             change={-2.3}
             link="/files"
@@ -71,18 +93,9 @@ export default function DashboardDefault() {
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-        <WeatherWidget 
-          location="Алматы"
-          temperature= "7"
-          condition = "Cloudy"
-          icon={<CloudOutlined />}
-          link="/home"/>
+          <FilesWidget files={latestFiveFiles} loading={loadingFiles} link="/files" />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>      
-        <FilesWidget />
       </Grid>
-      </Grid>
-     
     </MainCard>
   );
 }
