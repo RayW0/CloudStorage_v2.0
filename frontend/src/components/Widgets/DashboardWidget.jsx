@@ -5,7 +5,7 @@ import PropTypes from 'prop-types';
 import { useNavigate } from 'react-router-dom';
 import { CardContent, Typography, Stack, Grow, useTheme, Box, Avatar, CardActions, Button, LinearProgress } from '@mui/material';
 import { FileOutlined, ArrowUpOutlined, ArrowDownOutlined, InfoOutlined } from '@ant-design/icons';
-import MainCard from './MainCard';
+import MainCard from '../MainCard';
 
 /**
  * DashboardWidget - Улучшенный виджет с новым дизайном для отображения информации на главной странице

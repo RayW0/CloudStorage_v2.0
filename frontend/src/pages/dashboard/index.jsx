@@ -3,8 +3,9 @@ import { useState, useEffect } from 'react';
 // project import
 import MainCard from 'components/MainCard';
 import useUserProfile from 'hooks/useUserProfile';
-import DashboardWidget from 'components/DashboardWidget';
-import WeatherWidget from 'components/WeatherWidget';
+import DashboardWidget from 'components/Widgets/DashboardWidget';
+import WeatherWidget from 'components/Widgets/WeatherWidget';
+import FilesWidget from 'components/Widgets/FilesWidget';
 import { Grid, Typography, Stack } from '@mui/material';
 import { FileOutlined, UserOutlined } from '@ant-design/icons';
 import StatusButton from 'components/StatusButton';
@@ -77,7 +78,11 @@ export default function DashboardDefault() {
           icon={<CloudOutlined />}
           link="/home"/>
         </Grid>
+        <Grid item xs={12} sm={6} md={3}>      
+        <FilesWidget />
       </Grid>
+      </Grid>
+     
     </MainCard>
   );
 }

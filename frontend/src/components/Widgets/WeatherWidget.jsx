@@ -4,7 +4,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { CardContent, Typography, Stack, Grow, useTheme, Box, Avatar, CardActions, Button } from '@mui/material';
 import { CloudOutlined, InfoOutlined } from '@ant-design/icons';
-import MainCard from './MainCard';
+import MainCard from '../MainCard';
 
 /**
  * WeatherWidget - Улучшенный виджет для отображения погоды на главной странице
