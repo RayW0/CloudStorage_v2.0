@@ -104,7 +104,7 @@ export const createGroup = async (token, groupName, members) => {
       }
     );
     console.log('Ответ сервера:', response.data);
-    toast.success('Группа успешно создана!4');
+    toast.success('Группа успешно создана!');
     return response.data;
   } catch (error) {
     handleApiError(error);

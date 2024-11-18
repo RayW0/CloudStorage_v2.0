@@ -1,7 +1,16 @@
-// src/pages/AdminPanel.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Typography, Stack, Box, List, ListItem, Checkbox, ListItemText } from '@mui/material';
+import {
+  Button,
+  Typography,
+  Stack,
+  Box,
+  FormControl,
+  Select,
+  MenuItem,
+  Checkbox,
+  ListItemText,
+} from '@mui/material';
 import { CheckCircle } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import MainCard from 'components/MainCard';
@@ -30,7 +39,7 @@ export default function AdminPanel() {
     newGroupName,
     setNewGroupName,
     groupMembers,
-    handleToggleMember,
+    setGroupMembers,
     isLoading,
     handleAssignRole,
     handleAssignGroup,
@@ -39,7 +48,7 @@ export default function AdminPanel() {
     handleDeleteUser,
     handleBlockUser,
     handleUnblockUser,
-    handleRemoveUserFromGroup
+    handleRemoveUserFromGroup,
   } = useAdminPanel();
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -114,22 +123,36 @@ export default function AdminPanel() {
           <Typography variant="h6" gutterBottom>
             Создать новую группу
           </Typography>
-          <CreateGroupForm newGroupName={newGroupName} setNewGroupName={setNewGroupName} handleCreateGroup={handleCreateGroup} />
-          <Typography variant="subtitle1">Выберите участников группы:</Typography>
-          <List>
-            {Array.isArray(users) &&
-              users.map((user) => (
-                <ListItem key={user.uid} button onClick={() => handleToggleMember(user.uid)}>
-                  <Checkbox
-                    edge="start"
-                    checked={Array.isArray(groupMembers) && groupMembers.includes(user.uid)}
-                    tabIndex={-1}
-                    disableRipple
-                  />
-                  <ListItemText primary={user.displayName} />
-                </ListItem>
+          <CreateGroupForm
+            newGroupName={newGroupName}
+            setNewGroupName={setNewGroupName}
+            handleCreateGroup={() => handleCreateGroup(newGroupName, groupMembers)}
+          />
+
+          {/* Выбор участников группы */}
+          <FormControl fullWidth sx={{ mt: 2 }}>
+            <Typography variant="subtitle1" gutterBottom>
+              Выберите участников группы:
+            </Typography>
+            <Select
+              multiple
+              value={groupMembers}
+              onChange={(e) => setGroupMembers(e.target.value)}
+              renderValue={(selected) =>
+                users
+                  .filter((user) => selected.includes(user.uid))
+                  .map((user) => user.username)
+                  .join(', ')
+              }
+            >
+              {users.map((user) => (
+                <MenuItem key={user.uid} value={user.uid}>
+                  <Checkbox checked={groupMembers.includes(user.uid)} />
+                  <ListItemText primary={user.username} />
+                </MenuItem>
               ))}
-          </List>
+            </Select>
+          </FormControl>
         </Box>
 
         {/* Отображение списка групп с возможностью удаления и управления участниками */}

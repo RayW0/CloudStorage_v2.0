@@ -30,7 +30,6 @@ export default function UserProfile() {
 
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState({
-    username: '',
     email: '',
     userphone: '',
     position: '',
@@ -66,7 +65,7 @@ export default function UserProfile() {
     setEditing(false);
     // Сброс формы к данным из хука
     setFormData({
-      username: userName,
+      username: displayName,
       email: userEmail,
       userphone: userPhone,
       position: userPosition,

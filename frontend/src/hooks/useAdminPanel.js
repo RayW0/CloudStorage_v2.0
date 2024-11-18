@@ -83,7 +83,6 @@ const useAdminPanel = () => {
       setUsers((prevUsers) => prevUsers.map((user) => (user.uid === uid ? { ...user, group: groupId } : user)));
       setUid('');
       setGroupId('');
-      toast.success('Группа успешно назначена');
     } catch (error) {
       console.error('Ошибка при назначении группы:', error);
       toast.error('Ошибка при назначении группы');
@@ -113,7 +112,6 @@ const useAdminPanel = () => {
         setGroups((prevGroups) => [...prevGroups, response]);
         setNewGroupName('');
         setGroupMembers([]);
-        toast.success('Группа успешно создана!');
       } else {
         throw new Error('Некорректный ответ от сервера');
       }
@@ -192,7 +190,6 @@ const useAdminPanel = () => {
       setGroups((prevGroups) =>
         prevGroups.map((group) => (group.id === groupId ? { ...group, members: group.members.filter((id) => id !== userId) } : group))
       );
-      toast.success('Пользователь успешно удален из группы');
     } catch (error) {
       console.error('Ошибка при удалении пользователя из группы:', error);
       toast.error('Ошибка при удалении пользователя из группы');
@@ -211,6 +208,7 @@ const useAdminPanel = () => {
     newGroupName,
     setNewGroupName,
     groupMembers,
+    setGroupMembers,
     handleToggleMember,
     isLoading,
     handleAssignRole,

@@ -14,7 +14,7 @@ const UserSelect = ({ uid, setUid, users, disabled }) => (
     >
       {Array.isArray(users) && users.map((user) => (
         <MenuItem key={user.uid} value={user.uid}>
-          {user.name}
+          {user.username}
         </MenuItem>
       ))}
     </Select>

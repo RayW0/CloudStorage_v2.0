@@ -7,7 +7,6 @@ const UserProfileContext = createContext();
 export const UserProfileProvider = ({ children }) => {
   const { userName, userEmail, userPosition, profilePic, userBio, userPhone } = useUserProfile();
   const [formData, setFormData] = useState({
-    username: '',
     email: '',
     position: '',
     profile_pic: '',

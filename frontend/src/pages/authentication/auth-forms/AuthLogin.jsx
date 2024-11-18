@@ -207,14 +207,14 @@ export default function AuthLogin({ isDemo = false }) {
                 </Button>
               </AnimateButton>
             </Grid>
-            <Grid item xs={12}>
+            {/* <Grid item xs={12}>
               <Divider>
                 <Typography variant="caption"> Войти через</Typography>
               </Divider>
             </Grid>
             <Grid item xs={12}>
               <FirebaseSocial />
-            </Grid>
+            </Grid> */}
           </Grid>
         </form>
       )}

@@ -41,24 +41,6 @@ export default function FirebaseSocial() {
       >
         {!downSM && 'Google'}
       </Button>
-      <Button
-        variant="outlined"
-        color="secondary"
-        fullWidth={!downSM}
-        startIcon={<img src={Twitter} alt="Twitter" />}
-        onClick={twitterHandler}
-      >
-        {!downSM && 'Twitter'}
-      </Button>
-      <Button
-        variant="outlined"
-        color="secondary"
-        fullWidth={!downSM}
-        startIcon={<img src={Facebook} alt="Facebook" />}
-        onClick={facebookHandler}
-      >
-        {!downSM && 'Facebook'}
-      </Button>
     </Stack>
   );
 }
