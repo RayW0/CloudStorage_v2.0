@@ -228,14 +228,14 @@ const FileList = () => {
                         bgcolor: isItemSelected(folder) ? 'action.selected' : 'inherit'
                       }}
                     >
-                      <Checkbox
+                      {/* <Checkbox
                         checked={isItemSelected(folder)}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleSelectItem(folder);
                         }}
                         sx={{ marginRight: 2 }}
-                      />
+                      /> */}
                       <ListItemText
                         primary={
                           <Stack direction="row" alignItems="center">

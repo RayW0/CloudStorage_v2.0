@@ -27,11 +27,11 @@ const getFileIcon = ({ file }) => {
 
   switch (extension) {
     case 'pdf':
-      return <PictureAsPdfOutlinedIcon sx={{ fontSize: 40 }} />;
+      return <PictureAsPdfOutlinedIcon sx={{ fontSize: 35, mr: 1 }} />;
     case 'doc':
     case 'docx':
     case 'txt':
-      return <DescriptionOutlinedIcon sx={{ fontSize: 40 }} />;
+      return <DescriptionOutlinedIcon sx={{ fontSize: 35, mr: 1 }} />;
     case 'jpg':
     case 'jpeg':
     case 'png':
@@ -47,25 +47,25 @@ const getFileIcon = ({ file }) => {
           }}
         />
       ) : (
-        <ImageOutlinedIcon sx={{ fontSize: 40 }} />
+        <ImageOutlinedIcon sx={{ fontSize: 35, mr: 1 }} />
       );
     case 'mp3':
     case 'wav':
-      return <AudiotrackOutlinedIcon sx={{ fontSize: 40 }} />;
+      return <AudiotrackOutlinedIcon sx={{ fontSize: 35, mr: 1 }} />;
     case 'mp4':
     case 'avi':
-      return <MovieOutlinedIcon sx={{ fontSize: 40 }} />;
+      return <MovieOutlinedIcon sx={{ fontSize: 35, mr: 1 }} />;
     case 'zip':
     case 'rar':
     case '7z':
-      return <ArchiveOutlinedIcon sx={{ fontSize: 40 }} />;
+      return <ArchiveOutlinedIcon sx={{ fontSize: 35, mr: 1 }} />;
     case 'js':
     case 'html':
     case 'css':
     case 'json':
-      return <CodeOutlinedIcon sx={{ fontSize: 40 }} />;
+      return <CodeOutlinedIcon sx={{ fontSize: 35, mr: 1 }} />;
     default:
-      return <InsertDriveFileOutlinedIcon sx={{ fontSize: 40 }} />;
+      return <InsertDriveFileOutlinedIcon sx={{ fontSize: 35, mr: 1 }} />;
   }
 };
 

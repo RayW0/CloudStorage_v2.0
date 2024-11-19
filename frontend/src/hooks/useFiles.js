@@ -399,13 +399,18 @@ const useFiles = (currentDirectory) => {
   const handleDownloadFile = async (file) => {
     try {
       const URL = file.downloadURL || (await fileDownloadURL(file));
-      // Инициируем скачивание файла
+      const response = await fetch(URL, {
+        method: 'GET',
+      });
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = URL;
+      link.href = downloadUrl;
       link.download = file.name;
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
     } catch (error) {
       console.error('Ошибка при скачивании файла:', error);
       toast.error(`Не удалось скачать файл: ${error.message}`);
@@ -545,7 +550,8 @@ const useFiles = (currentDirectory) => {
       const fileRef = doc(db, 'files', file.id);
       await updateDoc(fileRef, {
         isDeleted: false,
-        deletedAt: null
+        deletedAt: null,
+        downloadURL: downloadURL
       });
 
       // Обновляем локальное состояние

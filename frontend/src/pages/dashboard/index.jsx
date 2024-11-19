@@ -8,27 +8,11 @@ import DashboardWidget from 'components/Widgets/DashboardWidget';
 import WeatherWidget from 'components/Widgets/WeatherWidget';
 import FilesWidget from 'components/Widgets/FilesWidget';
 import { Grid, Typography, Stack, CircularProgress } from '@mui/material';
-import { FileOutlined, UserOutlined } from '@ant-design/icons';
+import { FileOutlined } from '@ant-design/icons';
 import StatusButton from 'components/StatusButton';
-import { CloudOutlined } from '@ant-design/icons';
+import CloudQueueIcon from '@mui/icons-material/CloudQueue';
+import PermIdentityIcon from '@mui/icons-material/PermIdentity';
 import useFiles from 'hooks/useFiles';
-
-// avatar style
-const avatarSX = {
-  width: 36,
-  height: 36,
-  fontSize: '1rem'
-};
-
-// action style
-const actionSX = {
-  mt: 0.75,
-  ml: 1,
-  top: 'auto',
-  right: 'auto',
-  alignSelf: 'flex-start',
-  transform: 'none'
-};
 
 // ==============================|| DASHBOARD - DEFAULT ||============================== //
 
@@ -37,28 +21,17 @@ export default function DashboardDefault() {
   const [userCount, setUserCount] = useState(0);
   const [currentDirectory, setCurrentDirectory] = useState('/');
   const [loadingFiles, setLoadingFiles] = useState(true);
+  const [loadingUsers, setLoadingUsers] = useState(true);
+
 
   const { files } = useFiles(currentDirectory);
 
   useEffect(() => {
-    const fetchUserCount = async () => {
-      try {
-        const response = await fetch('/get-users');
-        const data = await response.json();
-        setUserCount(data.users.length);
-      } catch (error) {
-        console.error('Ошибка при получении количества пользователей:', error);
-      }
-    };
-
-    fetchUserCount();
-  }, []);
-
-  useEffect(() => {
-    if (files) {
+    if (files && loadingFiles) {
       setLoadingFiles(false);
     }
-  }, [files]);
+  }, [files, loadingFiles]);
+
 
   // Используем useMemo для мемоизации отсортированных файлов
   const latestFiveFiles = useMemo(() => {
@@ -71,7 +44,22 @@ export default function DashboardDefault() {
       {/* Приветственный текст */}
       <Stack spacing={2} sx={{ mb: 4 }}>
         <Typography variant="h2" sx={{ fontWeight: 'bold' }}>
-          Добро пожаловать, {userName}!
+          Добро пожаловать, <Typography component="span" sx={{
+  background: 'linear-gradient(135deg, #42a5f5 30%, #7986cb 90%)',
+  WebkitBackgroundClip: 'text',
+  WebkitTextFillColor: 'transparent',
+  fontWeight: 'bold', 
+  fontSize: '95%'
+  
+}}>
+  {userName}
+</Typography><Typography component="span" variant="h3" sx={{
+  background: 'linear-gradient(135deg, #42a5f5 30%, #7986cb 90%)',
+  WebkitBackgroundClip: 'text',
+  WebkitTextFillColor: 'transparent',
+  fontWeight: 'bold',
+  fontSize: '95%'
+}}>!</Typography>
         </Typography>
         <StatusButton initialStatus={userStatus} />
       </Stack>
@@ -79,12 +67,12 @@ export default function DashboardDefault() {
 
       <Grid container spacing={{ xs: 2, md: 3 }} columns={{ xs: 4, sm: 8, md: 12 }}>
         <Grid item xs={12} sm={6} md={3}>
-          <WeatherWidget location="Алматы" temperature="7" condition="Cloudy" icon={<CloudOutlined />} link="/home" />
+          <WeatherWidget location="Алматы" temperature="7" condition="Cloudy" icon={<CloudQueueIcon />} link="/home" />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <DashboardWidget
             title="Файлы"
-            value={files ? files.length : 0}
+            value={loadingFiles ? <CircularProgress size={24} /> : files.length}
             icon={<FileOutlined />}
             change={-2.3}
             link="/files"
@@ -94,6 +82,14 @@ export default function DashboardDefault() {
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <FilesWidget files={latestFiveFiles} loading={loadingFiles} link="/files" />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <DashboardWidget
+            title="Пользователи"
+            value={ userCount }
+            icon={<PermIdentityIcon />}
+            link="/#"
+          />
         </Grid>
       </Grid>
     </MainCard>

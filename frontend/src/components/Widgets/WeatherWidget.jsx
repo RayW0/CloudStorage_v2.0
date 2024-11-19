@@ -3,7 +3,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { CardContent, Typography, Stack, Grow, useTheme, Box, Avatar, CardActions, Button } from '@mui/material';
-import { CloudOutlined, InfoOutlined } from '@ant-design/icons';
+import { CloudOutlined } from '@ant-design/icons';
 import MainCard from '../MainCard';
 
 /**

@@ -28,7 +28,7 @@ export default function LatestFilesWidget({ files, loading, link }) {
       <MainCard
         sx={{
           minWidth: { xs: '100%', sm: 275 },
-          maxWidth: 350,
+          maxWidth: { xl: '100%', sm: 275 },
           mb: 3,
           cursor: 'pointer',
           transition: 'transform 0.3s, box-shadow 0.3s',

@@ -10,8 +10,7 @@ import { toast } from 'react-toastify';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import FileListView from 'src/components/FileListView';
 import MainCard from 'components/MainCard';
-import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
-import getFileIcon from 'utils/getFileIcon';
+
 
 const Trash = () => {
   // Состояния для удалённых файлов и папок

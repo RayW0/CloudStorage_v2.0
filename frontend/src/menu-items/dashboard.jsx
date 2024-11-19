@@ -1,9 +1,8 @@
 // assets
-import { DashboardOutlined, SettingOutlined } from '@ant-design/icons';
+import DashboardIcon from '@mui/icons-material/Dashboard';
 // icons
 const icons = {
-  DashboardOutlined,
-  SettingOutlined
+  DashboardIcon,
 };
 
 // ==============================|| MENU ITEMS - DASHBOARD ||============================== //
@@ -14,19 +13,11 @@ const dashboard = {
   type: 'group',
   children: [
     {
-      id: 'admin-panel',
-      title: 'Админ панель',
-      type: 'item',
-      url: '/admin',
-      icon: icons.SettingOutlined,
-      breadcrumbs: false
-    },
-    {
       id: 'dashboard',
       title: 'Виджеты',
       type: 'item',
       url: '/dashboard/default',
-      icon: icons.DashboardOutlined,
+      icon: icons.DashboardIcon,
       breadcrumbs: true
     }
   ]
