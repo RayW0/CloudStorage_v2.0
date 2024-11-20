@@ -10,6 +10,7 @@ import { toast } from 'react-toastify';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import FileListView from 'src/components/FileListView';
 import MainCard from 'components/MainCard';
+import useFiles from 'hooks/useFiles';
 
 
 const Trash = () => {
@@ -17,13 +18,20 @@ const Trash = () => {
   const [deletedFiles, setDeletedFiles] = useState([]);
   const [deletedFolders, setDeletedFolders] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-
+  const [currentDirectory, setCurrentDirectory] = useState('/');
   // Состояния для выбранных файлов и папок
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [selectedFolders, setSelectedFolders] = useState([]);
 
   // Состояние текущего пользователя
   const [currentUser, setCurrentUser] = useState(null);
+
+  const {
+    handleRestoreFolder,
+    handleRestoreFile,
+    handlePermanentDeleteFolders,
+    handlePermanentDeleteFiles,
+  } = useFiles(currentDirectory);
 
   // Инициализация слушателя аутентификации
   useEffect(() => {
@@ -41,7 +49,11 @@ const Trash = () => {
   // Функция для расчёта размера папки
   const calculateFolderSize = async (folderPath) => {
     try {
-      const qFiles = query(collection(db, 'files'), where('directory', '==', `${folderPath}/`), where('isDeleted', '==', true));
+      const qFiles = query(
+        collection(db, 'files'),
+        where('directory', '==', `${folderPath}/`),
+        where('isDeleted', '==', true)
+      );
       const querySnapshotFiles = await getDocs(qFiles);
       let totalSize = 0;
       querySnapshotFiles.forEach((doc) => {
@@ -52,10 +64,14 @@ const Trash = () => {
       });
 
       // Проверка вложенных папок
-      const qFolders = query(collection(db, 'folders'), where('directory', '==', `${folderPath}/`), where('isDeleted', '==', true));
+      const qFolders = query(
+        collection(db, 'folders'),
+        where('directory', '==', `${folderPath}/`),
+        where('isDeleted', '==', true)
+      );
       const querySnapshotFolders = await getDocs(qFolders);
-      for (const doc of querySnapshotFolders.docs) {
-        const subFolder = doc.data();
+      for (const subDoc of querySnapshotFolders.docs) {
+        const subFolder = subDoc.data();
         const subFolderSize = await calculateFolderSize(subFolder.folderPath);
         totalSize += subFolderSize;
       }
@@ -74,13 +90,21 @@ const Trash = () => {
       setIsLoading(true);
       try {
         // Запрос для удалённых файлов
-        const qFiles = query(collection(db, 'files'), where('ownerId', '==', currentUser.uid), where('isDeleted', '==', true));
+        const qFiles = query(
+          collection(db, 'files'),
+          where('ownerId', '==', currentUser.uid),
+          where('isDeleted', '==', true)
+        );
         const querySnapshotFiles = await getDocs(qFiles);
         const files = querySnapshotFiles.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
         setDeletedFiles(files);
 
         // Запрос для удалённых папок
-        const qFolders = query(collection(db, 'folders'), where('ownerId', '==', currentUser.uid), where('isDeleted', '==', true));
+        const qFolders = query(
+          collection(db, 'folders'),
+          where('ownerId', '==', currentUser.uid),
+          where('isDeleted', '==', true)
+        );
         const querySnapshotFolders = await getDocs(qFolders);
         const folders = await Promise.all(
           querySnapshotFolders.docs.map(async (doc) => {
@@ -100,129 +124,25 @@ const Trash = () => {
 
     fetchDeletedItems();
   }, [currentUser]);
+  
 
-  // Обработчики для восстановления файлов и папок
-  const handleRestoreFile = async (file) => {
-    try {
-      const fileRef = doc(db, 'files', file.id);
-      await updateDoc(fileRef, {
-        isDeleted: false,
-        deletedAt: null
-      });
-      setDeletedFiles((prev) => prev.filter((f) => f.id !== file.id));
-      setSelectedFiles((prevSelected) => prevSelected.filter((f) => f.id !== file.id));
-      toast.success(`Файл "${file.name}" восстановлен`);
-    } catch (error) {
-      console.error('Ошибка при восстановлении файла:', error);
-      toast.error('Ошибка при восстановлении файла');
-    }
-  };
-
-  const handlePermanentDeleteFile = async (file) => {
-    try {
-      const fileRef = doc(db, 'files', file.id);
-      await deleteDoc(fileRef);
-      setDeletedFiles((prev) => prev.filter((f) => f.id !== file.id));
-      setSelectedFiles((prevSelected) => prevSelected.filter((f) => f.id !== file.id));
-      toast.success(`Файл "${file.name}" удален окончательно`);
-    } catch (error) {
-      console.error('Ошибка при окончательном удалении файла:', error);
-      toast.error('Ошибка при окончательном удалении файла');
-    }
-  };
-
-  const handleRestoreFolder = async (folder) => {
-    try {
-      const folderRef = doc(db, 'folders', folder.id);
-      await updateDoc(folderRef, {
-        isDeleted: false,
-        deletedAt: null
-      });
-      setDeletedFolders((prev) => prev.filter((f) => f.id !== folder.id));
-      setSelectedFolders((prevSelected) => prevSelected.filter((f) => f.id !== folder.id));
-      toast.success(`Папка "${folder.name}" восстановлена`);
-    } catch (error) {
-      console.error('Ошибка при восстановлении папки:', error);
-      toast.error('Ошибка при восстановлении папки');
-    }
-  };
-
-  const handlePermanentDeleteFolder = async (folder) => {
-    try {
-      // Проверка, пустая ли папка (нет вложенных файлов и папок)
-      const qFiles = query(collection(db, 'files'), where('directory', '==', `${folder.folderPath}/`), where('isDeleted', '==', true));
-      const querySnapshotFiles = await getDocs(qFiles);
-      if (!querySnapshotFiles.empty) {
-        toast.error(`Папка "${folder.name}" содержит файлы и не может быть удалена окончательно`);
-        return;
-      }
-
-      const qFolders = query(collection(db, 'folders'), where('directory', '==', `${folder.folderPath}/`), where('isDeleted', '==', true));
-      const querySnapshotFolders = await getDocs(qFolders);
-      if (!querySnapshotFolders.empty) {
-        toast.error(`Папка "${folder.name}" содержит вложенные папки и не может быть удалена окончательно`);
-        return;
-      }
-
-      // Удаление папки из Firestore
-      const folderRef = doc(db, 'folders', folder.id);
-      await deleteDoc(folderRef);
-      setDeletedFolders((prev) => prev.filter((f) => f.id !== folder.id));
-      setSelectedFolders((prevSelected) => prevSelected.filter((f) => f.id !== folder.id));
-      toast.success(`Папка "${folder.name}" удалена окончательно`);
-    } catch (error) {
-      console.error('Ошибка при окончательном удалении папки:', error);
-      toast.error('Ошибка при окончательном удалении папки');
-    }
-  };
-
-  // Обработчики выбора файлов и папок
-  const handleSelectFile = (file) => {
-    setSelectedFiles((prevSelected) => {
-      if (prevSelected.some((f) => f.id === file.id)) {
-        return prevSelected.filter((f) => f.id !== file.id);
-      } else {
-        return [...prevSelected, file];
-      }
-    });
-  };
-
-  const handleSelectFolder = (folder) => {
-    setSelectedFolders((prevSelected) => {
-      if (prevSelected.some((f) => f.id === folder.id)) {
-        return prevSelected.filter((f) => f.id !== folder.id);
-      } else {
-        return [...prevSelected, folder];
-      }
-    });
-  };
-
-  // Обработчики выбора всех файлов и папок
-  const handleSelectAllFiles = () => {
-    if (selectedFiles.length === deletedFiles.length) {
-      setSelectedFiles([]);
-    } else {
-      setSelectedFiles([...deletedFiles]);
-    }
-  };
-
-  const handleSelectAllFolders = () => {
-    if (selectedFolders.length === deletedFolders.length) {
-      setSelectedFolders([]);
-    } else {
-      setSelectedFolders([...deletedFolders]);
-    }
-  };
-
-  // Обработчики восстановления и удаления выбранных файлов и папок
+  // Обработчики для восстановления и удаления выбранных файлов и папок
   const handleRestoreSelectedFiles = async () => {
+    if (selectedFiles.length === 0) {
+      toast.error('Нет выбранных файлов для восстановления');
+      return;
+    }
+
+    setIsLoading(true);
     try {
       await Promise.all(
         selectedFiles.map(async (file) => {
           const fileRef = doc(db, 'files', file.id);
           await updateDoc(fileRef, {
             isDeleted: false,
-            deletedAt: null
+            deletedAt: null,
+            // Удалите следующую строку, если не требуется обновлять downloadURL
+            // downloadURL: downloadURL
           });
         })
       );
@@ -232,10 +152,18 @@ const Trash = () => {
     } catch (error) {
       console.error('Ошибка при восстановлении выбранных файлов:', error);
       toast.error('Ошибка при восстановлении выбранных файлов');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handlePermanentDeleteSelectedFiles = async () => {
+    if (selectedFiles.length === 0) {
+      toast.error('Нет выбранных файлов для удаления');
+      return;
+    }
+
+    setIsLoading(true);
     try {
       await Promise.all(
         selectedFiles.map(async (file) => {
@@ -249,10 +177,18 @@ const Trash = () => {
     } catch (error) {
       console.error('Ошибка при окончательном удалении выбранных файлов:', error);
       toast.error('Ошибка при окончательном удалении выбранных файлов');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleRestoreSelectedFolders = async () => {
+    if (selectedFolders.length === 0) {
+      toast.error('Нет выбранных папок для восстановления');
+      return;
+    }
+
+    setIsLoading(true);
     try {
       await Promise.all(
         selectedFolders.map(async (folder) => {
@@ -269,15 +205,27 @@ const Trash = () => {
     } catch (error) {
       console.error('Ошибка при восстановлении выбранных папок:', error);
       toast.error('Ошибка при восстановлении выбранных папок');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handlePermanentDeleteSelectedFolders = async () => {
+    if (selectedFolders.length === 0) {
+      toast.error('Нет выбранных папок для удаления');
+      return;
+    }
+
+    setIsLoading(true);
     try {
       await Promise.all(
         selectedFolders.map(async (folder) => {
           // Проверка, пустая ли папка
-          const qFiles = query(collection(db, 'files'), where('directory', '==', `${folder.folderPath}/`), where('isDeleted', '==', true));
+          const qFiles = query(
+            collection(db, 'files'),
+            where('directory', '==', `${folder.folderPath}/`),
+            where('isDeleted', '==', true)
+          );
           const querySnapshotFiles = await getDocs(qFiles);
           if (!querySnapshotFiles.empty) {
             toast.error(`Папка "${folder.name}" содержит файлы и не может быть удалена окончательно`);
@@ -308,6 +256,48 @@ const Trash = () => {
     } catch (error) {
       console.error('Ошибка при окончательном удалении папок:', error);
       toast.error('Ошибка при окончательном удалении папок');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
+   // Функция для выбора папок и файлов
+   const handleSelectFile = (item) => {
+    setSelectedFiles((prevSelectedItems) => {
+      if (prevSelectedItems.includes(item)) {
+        return prevSelectedItems.filter((i) => i !== item);
+      } else {
+        return [...prevSelectedItems, item];
+      }
+    });
+  };
+
+  
+  const handleSelectFolder = (folder) => {
+    setSelectedFolders((prevSelected) => {
+      if (prevSelected.some((f) => f.id === folder.id)) {
+        return prevSelected.filter((f) => f.id !== folder.id);
+      } else {
+        return [...prevSelected, folder];
+      }
+    });
+  };
+
+  // Обработчики выбора всех файлов и папок
+  const handleSelectAllFiles = () => {
+    if (selectedFiles.length === deletedFiles.length) {
+      setSelectedFiles([]);
+    } else {
+      setSelectedFiles([...deletedFiles]);
+    }
+  };
+
+  const handleSelectAllFolders = () => {
+    if (selectedFolders.length === deletedFolders.length) {
+      setSelectedFolders([]);
+    } else {
+      setSelectedFolders([...deletedFolders]);
     }
   };
 
@@ -317,7 +307,7 @@ const Trash = () => {
       <IconButton onClick={() => handleRestoreFile(file)} title="Восстановить">
         <RestoreFromTrashOutlinedIcon />
       </IconButton>
-      <IconButton onClick={() => handlePermanentDeleteFile(file)} title="Удалить окончательно">
+      <IconButton onClick={() => handlePermanentDeleteFiles(file)} title="Удалить окончательно">
         <DeleteForeverOutlinedIcon />
       </IconButton>
     </Stack>
@@ -328,7 +318,7 @@ const Trash = () => {
       <IconButton onClick={() => handleRestoreFolder(folder)} title="Восстановить">
         <RestoreFromTrashOutlinedIcon />
       </IconButton>
-      <IconButton onClick={() => handlePermanentDeleteFolder(folder)} title="Удалить окончательно">
+      <IconButton onClick={() => handlePermanentDeleteFolders(folder)} title="Удалить окончательно">
         <DeleteForeverOutlinedIcon />
       </IconButton>
     </Stack>

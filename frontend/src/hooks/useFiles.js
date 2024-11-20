@@ -277,6 +277,17 @@ const useFiles = (currentDirectory) => {
     });
   };
 
+     // Функция для выбора папок и файлов
+     const handleSelectFile = (item) => {
+      setSelectedFiles((prevSelectedItems) => {
+        if (prevSelectedItems.includes(item)) {
+          return prevSelectedItems.filter((i) => i !== item);
+        } else {
+          return [...prevSelectedItems, item];
+        }
+      });
+    };
+
   // Функция для отмены совместного использования папки с группой
   const handleUnshareFolderFromGroup = async (folder) => {
     if (!currentUser) {
@@ -647,6 +658,7 @@ const useFiles = (currentDirectory) => {
     handleRestoreFile,
     handlePermanentDeleteFolders,
     handlePermanentDeleteFiles,
+    handleSelectFile,
     currentUser
   };
 };
