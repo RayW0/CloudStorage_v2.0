@@ -1,6 +1,6 @@
 // src/components/FileList.jsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   List,
   ListItem,
@@ -25,13 +25,15 @@ import FileActions from 'components/files/FileActions';
 import ViewModeToggle from 'components/@extended/ViewModeToggle';
 import useFiles from 'hooks/useFiles';
 import useSort from 'hooks/useSort';
+import FileListView from 'components/FileListView';
 import GetFileIcon from 'utils/getFileIcon';
 
 const FileList = () => {
   // Определение состояния
   const [sortField, setSortField] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
-  const [selectedItems, setSelectedItems] = useState([]); // Массив выбранных папок и файлов
+  const [selectedFolderIds, setSelectedFolderIds] = useState([]); // Массив выбранных папок (ID)
+  const [selectedFileIds, setSelectedFileIds] = useState([]); // Массив выбранных файлов (ID)
   const [selectAll, setSelectAll] = useState(false);
 
   // Инициализация currentDirectory как '/'
@@ -59,7 +61,8 @@ const FileList = () => {
   const sortedFiles = useSort(files, sortField, sortOrder);
 
   // Объединяем папки и файлы для выборки "Выбрать все"
-  const allItems = [...sortedFolders, ...sortedFiles];
+  const allFolderIds = sortedFolders.map((folder) => folder.id);
+  const allFileIds = sortedFiles.map((file) => file.id);
 
   // Логирование текущего состояния для отладки
   useEffect(() => {
@@ -77,11 +80,14 @@ const FileList = () => {
   };
 
   // Функция для открытия папки
-  const handleOpenFolder = (folder) => {
-    const newPath = currentDirectory === '/' ? `/${folder.name}/` : `${currentDirectory}${folder.name}/`; // Добавляем имя папки и '/'
-    console.log('Navigating to:', newPath);
-    setCurrentDirectory(newPath); // Обновляем currentDirectory
-  };
+  const handleOpenFolder = useCallback(
+    (folder) => {
+      const newPath = currentDirectory === '/' ? `/${folder.name}/` : `${currentDirectory}${folder.name}/`; // Добавляем имя папки и '/'
+      console.log('Navigating to:', newPath);
+      setCurrentDirectory(newPath); // Обновляем currentDirectory
+    },
+    [currentDirectory]
+  );
 
   // Функция для навигации назад
   const handleNavigateBack = () => {
@@ -99,37 +105,50 @@ const FileList = () => {
 
   // Функция для удаления выбранных папок и файлов
   const handleDeleteSelected = () => {
-    const selectedFolders = selectedItems.filter((item) => item.type === 'folder');
-    const selectedFiles = selectedItems.filter((item) => item.type === 'file');
-
-    if (selectedFolders.length > 0) {
-      handleDeleteFolders(selectedFolders);
+    if (selectedFolderIds.length > 0) {
+      console.log('Deleting Folders with IDs:', selectedFolderIds);
+      handleDeleteFolders(selectedFolderIds);
     }
-    if (selectedFiles.length > 0) {
-      handleDeleteFiles(selectedFiles);
+    if (selectedFileIds.length > 0) {
+      console.log('Deleting Files with IDs:', selectedFileIds);
+      handleDeleteFiles(selectedFileIds);
     }
-    setSelectedItems([]);
+    setSelectedFolderIds([]);
+    setSelectedFileIds([]);
     setSelectAll(false);
   };
 
-  // Функция для выбора папок и файлов
-  const handleSelectItem = (item) => {
-    setSelectedItems((prevSelectedItems) => {
-      if (prevSelectedItems.includes(item)) {
-        return prevSelectedItems.filter((i) => i !== item);
+  // Функции для выбора папок и файлов
+  const handleSelectFolder = (folderId) => {
+    setSelectedFolderIds((prevSelected) => {
+      if (prevSelected.includes(folderId)) {
+        return prevSelected.filter((id) => id !== folderId);
       } else {
-        return [...prevSelectedItems, item];
+        return [...prevSelected, folderId];
       }
     });
   };
 
-  const isItemSelected = (item) => selectedItems.includes(item);
+  const handleSelectFile = (fileId) => {
+    setSelectedFileIds((prevSelected) => {
+      if (prevSelected.includes(fileId)) {
+        return prevSelected.filter((id) => id !== fileId);
+      } else {
+        return [...prevSelected, fileId];
+      }
+    });
+  };
+
+  const isFolderSelected = (folderId) => selectedFolderIds.includes(folderId);
+  const isFileSelected = (fileId) => selectedFileIds.includes(fileId);
 
   const handleSelectAll = () => {
     if (selectAll) {
-      setSelectedItems([]);
+      setSelectedFolderIds([]);
+      setSelectedFileIds([]);
     } else {
-      setSelectedItems([...allItems]);
+      setSelectedFolderIds([...allFolderIds]);
+      setSelectedFileIds([...allFileIds]);
     }
     setSelectAll(!selectAll);
   };
@@ -185,7 +204,7 @@ const FileList = () => {
             }
           }}
         />
-        {selectedItems.length > 0 && (
+        {(selectedFolderIds.length > 0 || selectedFileIds.length > 0) && (
           <Button variant="contained" color="error" onClick={handleDeleteSelected} startIcon={<DeleteOutlined />}>
             Удалить
           </Button>
@@ -204,9 +223,17 @@ const FileList = () => {
         <>
           <Stack direction="row" alignItems="center" sx={{ mb: 2 }}>
             <Checkbox
-              checked={selectAll}
+              checked={
+                selectedFolderIds.length === allFolderIds.length &&
+                selectedFileIds.length === allFileIds.length &&
+                allFolderIds.length > 0 &&
+                allFileIds.length > 0
+              }
               onChange={handleSelectAll}
-              indeterminate={selectedItems.length > 0 && selectedItems.length < allItems.length}
+              indeterminate={
+                (selectedFolderIds.length > 0 && selectedFolderIds.length < allFolderIds.length) ||
+                (selectedFileIds.length > 0 && selectedFileIds.length < allFileIds.length)
+              }
             />
             <Typography variant="h5" sx={{ ml: 1 }}>
               Имя
@@ -222,20 +249,20 @@ const FileList = () => {
                   <div key={folder.id}>
                     <ListItem
                       button
-                      onClick={() => handleOpenFolder(folder)} // Используем handleOpenFolder здесь
-                      selected={isItemSelected(folder)}
+                      onClick={() => handleOpenFolder(folder)}
+                      selected={isFolderSelected(folder.id)}
                       sx={{
-                        bgcolor: isItemSelected(folder) ? 'action.selected' : 'inherit'
+                        bgcolor: isFolderSelected(folder.id) ? 'action.selected' : 'inherit'
                       }}
                     >
-                      {/* <Checkbox
-                        checked={isItemSelected(folder)}
+                      <Checkbox
+                        checked={isFolderSelected(folder.id)}
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleSelectItem(folder);
+                          handleSelectFolder(folder.id);
                         }}
                         sx={{ marginRight: 2 }}
-                      /> */}
+                      />
                       <ListItemText
                         primary={
                           <Stack direction="row" alignItems="center">
@@ -245,11 +272,10 @@ const FileList = () => {
                             </Typography>
                           </Stack>
                         }
-                        secondary={`Изменен: ${formatDate(folder.createdAt)} | Владелец: ${currentUser?.displayName || 'Неизвестный пользователь'}`}
+                        secondary={`Изменён: ${formatDate(folder.createdAt)} | Владелец: ${currentUser?.displayName || 'Неизвестный пользователь'}`}
                       />
                       <ListItemSecondaryAction>
                         <Stack direction="row" spacing={1}>
-                          {/* Кнопка "Поделиться с группой" или "Закрыть доступ" */}
                           {folder.ownerId === currentUser?.uid && (
                             <>
                               {folder.groupId === null ? (
@@ -257,7 +283,7 @@ const FileList = () => {
                                   <IconButton
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      handleShareFolderToGroup(folder);
+                                      handleShareFolderToGroup(folder.id);
                                     }}
                                     color="primary"
                                   >
@@ -269,9 +295,8 @@ const FileList = () => {
                                   <IconButton
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      handleUnshareFolderFromGroup(folder);
+                                      handleUnshareFolderFromGroup(folder.id);
                                     }}
-                                    title="Закрыть доступ"
                                     color="secondary"
                                   >
                                     <ShareAltOutlined />
@@ -280,7 +305,6 @@ const FileList = () => {
                               )}
                             </>
                           )}
-                          {/* Отображение статуса совместного использования */}
                           {folder.groupId !== null && (
                             <Typography variant="caption" color="textSecondary" sx={{ mt: 1 }}>
                               Поделено с группой
@@ -299,17 +323,17 @@ const FileList = () => {
                   <div key={file.id}>
                     <ListItem
                       button
-                      onClick={() => handleSelectItem(file)}
-                      selected={isItemSelected(file)}
+                      onClick={() => handleSelectFile(file.id)}
+                      selected={isFileSelected(file.id)}
                       sx={{
-                        bgcolor: isItemSelected(file) ? 'action.selected' : 'inherit'
+                        bgcolor: isFileSelected(file.id) ? 'action.selected' : 'inherit'
                       }}
                     >
                       <Checkbox
-                        checked={isItemSelected(file)}
+                        checked={isFileSelected(file.id)}
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleSelectItem(file);
+                          handleSelectFile(file.id);
                         }}
                         sx={{ marginRight: 2 }}
                       />
@@ -322,7 +346,7 @@ const FileList = () => {
                             </Typography>
                           </Stack>
                         }
-                        secondary={`Размер: ${file.size ? (file.size / (1024 * 1024)).toFixed(2) + ' MB' : '—'} | Изменен: ${formatDate(file.last_modified)} | Владелец: ${currentUser?.displayName || 'Неизвестный пользователь'}`}
+                        secondary={`Размер: ${file.size ? (file.size / (1024 * 1024)).toFixed(2) + ' MB' : '—'} | Изменён: ${formatDate(file.last_modified)} | Владелец: ${currentUser?.displayName || 'Неизвестный пользователь'}`}
                       />
                       <ListItemSecondaryAction>
                         <Stack direction="row" spacing={1}>
@@ -357,25 +381,25 @@ const FileList = () => {
                       sx={{
                         display: 'flex',
                         flexDirection: 'column',
-                        border: isItemSelected(folder) ? '2px solid #1976d2' : '1px solid #e0e0e0',
+                        border: isFolderSelected(folder.id) ? '2px solid #1976d2' : '1px solid #e0e0e0',
                         borderRadius: 2,
                         padding: 2,
                         cursor: 'pointer',
                         position: 'relative',
-                        backgroundColor: isItemSelected(folder) ? 'rgba(25, 118, 210, 0.1)' : 'inherit',
+                        backgroundColor: isFolderSelected(folder.id) ? 'rgba(25, 118, 210, 0.1)' : 'inherit',
                         '&:hover': {
                           boxShadow: 3
                         },
                         height: '100%'
                       }}
-                      onClick={() => handleOpenFolder(folder)} // Используем handleOpenFolder здесь
+                      onClick={() => handleOpenFolder(folder)}
                     >
                       {/* Checkbox для выбора папки */}
                       <Checkbox
-                        checked={isItemSelected(folder)}
+                        checked={isFolderSelected(folder.id)}
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleSelectItem(folder);
+                          handleSelectFolder(folder.id);
                         }}
                         sx={{ position: 'absolute', top: 8, left: 8 }}
                       />
@@ -390,7 +414,7 @@ const FileList = () => {
 
                       {/* Дополнительная информация */}
                       <Typography variant="caption" color="textSecondary">
-                        {`Изменен: ${formatDate(folder.createdAt)}`}
+                        {`Изменён: ${formatDate(folder.createdAt)}`}
                       </Typography>
                       <Typography variant="caption" color="textSecondary">
                         {`Владелец: ${currentUser?.displayName || 'Неизвестный пользователь'}`}
@@ -398,13 +422,12 @@ const FileList = () => {
 
                       {/* Действия для папки */}
                       <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                        {/* Кнопка "Поделиться с группой" или статус */}
                         {folder.groupId === null && folder.ownerId === currentUser?.uid && (
                           <Tooltip title="Поделиться с группой">
                             <IconButton
                               onClick={(e) => {
-                                e.stopPropagation(); // Предотвращаем всплытие события
-                                handleShareFolderToGroup(folder);
+                                e.stopPropagation();
+                                handleShareFolderToGroup(folder.id);
                               }}
                               title="Поделиться с группой"
                               color="primary"
@@ -431,25 +454,25 @@ const FileList = () => {
                       sx={{
                         display: 'flex',
                         flexDirection: 'column',
-                        border: isItemSelected(file) ? '2px solid #1976d2' : '1px solid #e0e0e0',
+                        border: isFileSelected(file.id) ? '2px solid #1976d2' : '1px solid #e0e0e0',
                         borderRadius: 2,
                         padding: 2,
                         cursor: 'pointer',
                         position: 'relative',
-                        backgroundColor: isItemSelected(file) ? 'rgba(25, 118, 210, 0.1)' : 'inherit',
+                        backgroundColor: isFileSelected(file.id) ? 'rgba(25, 118, 210, 0.1)' : 'inherit',
                         '&:hover': {
                           boxShadow: 3
                         },
                         height: '100%'
                       }}
-                      onClick={() => handleSelectItem(file)} // Выбираем файл при клике
+                      onClick={() => handleSelectFile(file.id)}
                     >
                       {/* Checkbox для выбора файла */}
                       <Checkbox
-                        checked={isItemSelected(file)}
+                        checked={isFileSelected(file.id)}
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleSelectItem(file);
+                          handleSelectFile(file.id);
                         }}
                         sx={{ position: 'absolute', top: 8, left: 8 }}
                       />
@@ -467,7 +490,7 @@ const FileList = () => {
                         {`Размер: ${file.size ? (file.size / (1024 * 1024)).toFixed(2) + ' MB' : '—'}`}
                       </Typography>
                       <Typography variant="caption" color="textSecondary">
-                        {`Изменен: ${formatDate(file.last_modified)}`}
+                        {`Изменён: ${formatDate(file.last_modified)}`}
                       </Typography>
                       <Typography variant="caption" color="textSecondary">
                         {`Владелец: ${currentUser?.displayName || 'Неизвестный пользователь'}`}
