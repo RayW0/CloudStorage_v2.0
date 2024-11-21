@@ -40,7 +40,7 @@ export default function DashboardWidget({ title, value, icon, change, link, extr
           },
           borderRadius: 4,
           position: 'relative',
-          background: `linear-gradient(135deg, ${theme.palette.grey[100]} 30%, ${theme.palette.grey[300]} 100%)`,
+          background: `linear-gradient(135deg, #ffffff 0%, #42a5f5 100%)`,
           color: theme.palette.text.primary,
           overflow: 'hidden'
         }}

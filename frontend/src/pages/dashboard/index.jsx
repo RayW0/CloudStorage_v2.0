@@ -13,6 +13,7 @@ import StatusButton from 'components/StatusButton';
 import CloudQueueIcon from '@mui/icons-material/CloudQueue';
 import PermIdentityIcon from '@mui/icons-material/PermIdentity';
 import useFiles from 'hooks/useFiles';
+import { collection, getCountFromServer } from 'firebase/firestore';
 
 // ==============================|| DASHBOARD - DEFAULT ||============================== //
 
@@ -38,6 +39,21 @@ export default function DashboardDefault() {
     if (!files) return [];
     return [...files].sort((a, b) => new Date(b.uploadDate) - new Date(a.uploadDate)).slice(0, 5);
   }, [files]);
+
+  const fetchUserCount = async () => {
+    try {
+      const usersCollection = collection(db, 'users');
+      const snapshot = await getCountFromServer(usersCollection);
+      setUserCount(snapshot.data().count);
+    } catch (error) {
+      console.error('Ошибка при получении количества пользователей:', error);
+      toast.error('Не удалось получить количество пользователей');
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  
 
   return (
     <MainCard sx={{ p: 4 }}>

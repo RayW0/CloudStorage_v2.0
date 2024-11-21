@@ -7,7 +7,7 @@ import LoadingOverlay from 'components/@extended/LoadingOverlay';
 import useUserProfile from 'hooks/useUserProfile';
 import uploadProfilePicture from 'utils/uploadProfilePicture';
 import { getAuth, updateProfile } from 'firebase/auth';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, collection, getCountFromServer } from 'firebase/firestore';
 import { db } from 'firebaseConfig';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -16,13 +16,10 @@ export default function UserProfile() {
   const {
     userName,
     userEmail,
-    userStatus,
-    userRole,
     userPosition,
     profilePic,
     userBio,
     userPhone,
-    isBlocked,
     userGroupId,
     userGroupName,
     isLoading
@@ -165,6 +162,19 @@ export default function UserProfile() {
     handleSave();
   };
 
+  const fetchUserCount = async () => {
+    try {
+      const usersCollection = collection(db, 'users');
+      const snapshot = await getCountFromServer(usersCollection);
+      setUserCount(snapshot.data().count);
+    } catch (error) {
+      console.error('Ошибка при получении количества пользователей:', error);
+      toast.error('Не удалось получить количество пользователей');
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+  
   // Подготовка массива групп для передачи в ProfileForm
   const userGroups = userGroupName ? [{ id: userGroupId, name: userGroupName }] : [];
 
