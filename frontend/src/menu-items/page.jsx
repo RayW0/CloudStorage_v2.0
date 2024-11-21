@@ -11,7 +11,7 @@ const icons = {
 
 const pages = {
   id: 'authentication',
-  title: 'Аутентификация',
+  title: 'Авторизация',
   type: 'group',
   children: [
     {

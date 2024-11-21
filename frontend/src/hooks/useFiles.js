@@ -31,7 +31,7 @@ const useFiles = (currentDirectory = '/') => {
     });
 
     return () => unsubscribe();
-  }, [currentDirectory, groupId, currentDirectory]);
+  }, [currentDirectory, groupId]);
 
   // Получение groupId пользователя
   const fetchUserGroupId = useCallback(async (uid) => {
@@ -52,50 +52,58 @@ const useFiles = (currentDirectory = '/') => {
     }
   }, []);
 
-  // Получение папок
-  const fetchFolders = useCallback(async () => {
-    if (!currentUser) return;
-    setIsLoading(true);
-    try {
-      const currentPath = currentDirectory || '/';
+ // Получение папок
+ const fetchFolders = useCallback(async () => {
+  if (!currentUser) return;
+  setIsLoading(true);
+  try {
+    const currentPath = currentDirectory || '/';
 
-      const folderQueries = [
+    const folderQueries = [
+      query(
+        collection(db, 'folders'),
+        where('directory', '==', currentPath),
+        where('isDeleted', '==', false),
+        where('ownerId', '==', currentUser.uid)
+      )
+    ];
+
+    if (groupId) {
+      folderQueries.push(
         query(
           collection(db, 'folders'),
           where('directory', '==', currentPath),
           where('isDeleted', '==', false),
-          where('ownerId', '==', currentUser.uid)
+          where('groupId', '==', groupId)
         )
-      ];
-
-      if (groupId) {
-        folderQueries.push(
-          query(
-            collection(db, 'folders'),
-            where('directory', '==', currentPath),
-            where('isDeleted', '==', false),
-            where('groupId', '==', groupId)
-          )
-        );
-      }
-
-      const querySnapshots = await Promise.all(folderQueries.map((q) => getDocs(q)));
-      const fetchedFolders = [];
-      querySnapshots.forEach((snapshot) => {
-        snapshot.forEach((docSnap) => {
-          const data = docSnap.data();
-          fetchedFolders.push({ id: docSnap.id, type: 'folder', ...data });
-        });
-      });
-
-      setFolders(fetchedFolders);
-    } catch (error) {
-      console.error('Ошибка при получении папок:', error);
-      toast.error(`Не удалось получить папки: ${error.message}`);
-    } finally {
-      setIsLoading(false);
+      );
     }
-  }, [currentUser, groupId, currentDirectory]);
+
+    const querySnapshots = await Promise.all(folderQueries.map((q) => getDocs(q)));
+    const folderMap = new Map();
+
+    querySnapshots.forEach((snapshot) => {
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        const id = docSnap.id;
+        // Проверяем, добавляли ли мы уже папку с таким ID
+        if (!folderMap.has(id)) {
+          folderMap.set(id, { id, type: 'folder', ...data });
+        }
+      });
+    });
+
+    const fetchedFolders = Array.from(folderMap.values());
+
+    setFolders(fetchedFolders);
+  } catch (error) {
+    console.error('Ошибка при получении папок:', error);
+    toast.error(`Не удалось получить папки: ${error.message}`);
+  } finally {
+    setIsLoading(false);
+  }
+}, [currentUser, groupId, currentDirectory]);
+
 
   // Получение файлов
   const fetchFiles = useCallback(async () => {
@@ -125,13 +133,20 @@ const useFiles = (currentDirectory = '/') => {
       }
 
       const querySnapshots = await Promise.all(fileQueries.map((q) => getDocs(q)));
-      const fetchedFiles = [];
+      const fileMap = new Map();
+
       querySnapshots.forEach((snapshot) => {
         snapshot.forEach((docSnap) => {
           const data = docSnap.data();
-          fetchedFiles.push({ id: docSnap.id, type: 'file', ...data });
+          const id = docSnap.id;
+          // Проверяем, добавляли ли мы уже файл с таким ID
+          if (!fileMap.has(id)) {
+            fileMap.set(id, { id, type: 'file', ...data });
+          }
         });
       });
+
+      const fetchedFiles = Array.from(fileMap.values());
 
       setFiles(fetchedFiles);
     } catch (error) {
@@ -141,6 +156,7 @@ const useFiles = (currentDirectory = '/') => {
       setIsLoading(false);
     }
   }, [currentUser, groupId, currentDirectory]);
+
 
   // Создание папки
   const handleCreateFolder = useCallback(

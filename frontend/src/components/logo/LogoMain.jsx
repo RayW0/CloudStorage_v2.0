@@ -1,4 +1,6 @@
 import { useTheme } from '@mui/material/styles';
+import CloudOutlinedIcon from '@mui/icons-material/CloudOutlined';
+import { Box } from '@mui/material';
 
 // ==============================|| LOGO SVG ||============================== //
 
@@ -6,21 +8,42 @@ const Logo = () => {
   const theme = useTheme();
 
   return (
-    <svg width="118" height="35" viewBox="0 0 118 35" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" fontSize="18" fontWeight="bold" fill={theme.palette.primary.dark}>
-        SecureCloud
-      </text>
-      <defs>
-        <linearGradient id="paint0_linear" x1="8.62526" y1="14.0888" x2="5.56709" y2="17.1469" gradientUnits="userSpaceOnUse">
-          <stop stopColor={theme.palette.primary.darker} />
-          <stop offset="0.9637" stopColor={theme.palette.primary.dark} stopOpacity="0" />
-        </linearGradient>
-        <linearGradient id="paint1_linear" x1="26.2675" y1="14.1279" x2="28.7404" y2="16.938" gradientUnits="userSpaceOnUse">
-          <stop stopColor={theme.palette.primary.darker} />
-          <stop offset="1" stopColor={theme.palette.primary.dark} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-    </svg>
+    <Box display="flex" alignItems="center">
+      <CloudOutlinedIcon sx={{ color: theme.palette.primary.light, fontSize: 25, mr: 1 }} />
+      <svg
+        width="118"
+        height="35"
+        viewBox="0 0 118 35"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-label="SecureCloud Logo"
+      >
+        <text
+          x="50%"
+          y="50%"
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fontSize="19"
+          fontWeight="bold"
+          fill="url(#paint0_linear)"
+        >
+          SecureCloud
+        </text>
+        <defs>
+          <linearGradient
+            id="paint0_linear"
+            x1="0%"
+            y1="0%"
+            x2="100%"
+            y2="0%"
+            gradientUnits="userSpaceOnUse"
+          >
+            <stop stopColor="#42a5f5" />
+            <stop offset="1" stopColor="#6b8cd4" />
+          </linearGradient>
+        </defs>
+      </svg>
+    </Box>
   );
 };
 
