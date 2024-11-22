@@ -1,14 +1,6 @@
 // components/ProfileForm.jsx
 import React from 'react';
-import {
-  TextField,
-  Button,
-  Stack,
-  Avatar,
-  Grid,
-  Chip,
-  Typography,
-} from '@mui/material';
+import { TextField, Button, Stack, Avatar, Grid, Chip, Typography } from '@mui/material';
 import { UploadOutlined } from '@ant-design/icons';
 
 const ProfileForm = ({
@@ -20,25 +12,16 @@ const ProfileForm = ({
   handleFileChange,
   handleSaveClick,
   handleCancel,
-  handleEdit,
+  handleEdit
 }) => {
   return (
     <Grid container spacing={6} justifyContent="start" alignItems="center">
       {/* Левая колонка: Аватар и загрузка фото */}
       <Grid item xs={12} md={5} container justifyContent="center">
         <Stack spacing={3} alignItems="center">
-          <Avatar
-            src={formData.profile_pic}
-            sx={{ width: 240, height: 240 }}
-            alt={formData.username}
-          />
+          <Avatar src={formData.profile_pic} sx={{ width: 240, height: 240 }} alt={formData.username} />
           {editing && (
-            <Button
-              variant="contained"
-              component="label"
-              startIcon={<UploadOutlined />}
-              disabled={uploading}
-            >
+            <Button variant="contained" component="label" startIcon={<UploadOutlined />} disabled={uploading}>
               {uploading ? 'Загрузка...' : 'Загрузить фото'}
               <input type="file" hidden accept="image/*" onChange={handleFileChange} />
             </Button>
@@ -56,7 +39,7 @@ const ProfileForm = ({
             onChange={handleInputChange}
             fullWidth
             InputProps={{
-              readOnly: !editing,
+              readOnly: !editing
             }}
           />
 
@@ -67,7 +50,7 @@ const ProfileForm = ({
             onChange={handleInputChange}
             fullWidth
             InputProps={{
-              readOnly: !editing,
+              readOnly: !editing
             }}
           />
 
@@ -78,7 +61,7 @@ const ProfileForm = ({
             onChange={handleInputChange}
             fullWidth
             InputProps={{
-              readOnly: !editing,
+              readOnly: !editing
             }}
           />
 
@@ -89,7 +72,7 @@ const ProfileForm = ({
             onChange={handleInputChange}
             fullWidth
             InputProps={{
-              readOnly: !editing,
+              readOnly: !editing
             }}
           />
 
@@ -103,7 +86,7 @@ const ProfileForm = ({
             maxRows={4}
             variant="outlined"
             InputProps={{
-              readOnly: !editing,
+              readOnly: !editing
             }}
           />
 
@@ -113,13 +96,7 @@ const ProfileForm = ({
             {userGroups.length > 0 ? (
               <Stack direction="row" spacing={1} flexWrap="wrap">
                 {userGroups.map((group) => (
-                  <Chip
-                    key={group.id}
-                    label={group.name}
-                    color="primary"
-                    variant="outlined"
-                    style={{ marginBottom: '8px' }}
-                  />
+                  <Chip key={group.id} label={group.name} color="primary" variant="outlined" style={{ marginBottom: '8px' }} />
                 ))}
               </Stack>
             ) : (
@@ -131,12 +108,7 @@ const ProfileForm = ({
           <Stack direction="row" spacing={2}>
             {editing ? (
               <>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={handleSaveClick}
-                  disabled={uploading}
-                >
+                <Button variant="contained" color="primary" onClick={handleSaveClick} disabled={uploading}>
                   Сохранить
                 </Button>
                 <Button variant="outlined" color="secondary" onClick={handleCancel}>

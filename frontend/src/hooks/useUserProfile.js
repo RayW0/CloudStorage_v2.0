@@ -1,7 +1,10 @@
+// src/hooks/useUserProfile.js
+
 import { useState, useEffect } from 'react';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc } from 'firebase/firestore';
 import { db } from 'firebaseConfig';
+import { toast } from 'react-toastify';
 
 export default function useUserProfile() {
   const [userName, setUserName] = useState('Гость');
@@ -13,60 +16,93 @@ export default function useUserProfile() {
   const [userBio, setUserBio] = useState('');
   const [userPhone, setUserPhone] = useState('');
   const [isBlocked, setIsBlocked] = useState(false);
-  const [userGroupId, setUserGroupId] = useState('');
-  const [userGroupName, setUserGroupName] = useState('');
+  const [userGroupIds, setUserGroupIds] = useState([]); // Массив ID групп
+  const [userGroups, setUserGroups] = useState([]); // Массив объектов групп
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const auth = getAuth();
 
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
         setUserName(user.displayName || 'Гость');
         setUserEmail(user.email || '');
 
-        try {
-          await user.getIdToken(true);
-          const token = await user.getIdTokenResult();
-          setUserRole(token.claims.admin ? 'admin' : 'user'); // Предполагается, что роль админа определяется через кастомные утверждения
+        // Получение кастомных утверждений для роли
+        user
+          .getIdTokenResult(true)
+          .then((idTokenResult) => {
+            setUserRole(idTokenResult.claims.admin ? 'admin' : 'user');
+          })
+          .catch((error) => {
+            console.error('Ошибка при получении ID токена:', error);
+          });
 
-          const userDocRef = doc(db, 'users', user.uid);
-          const userDoc = await getDoc(userDocRef);
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            setUserPosition(userData.position || 'не указано');
-            setProfilePic(userData.profile_pic || '');
-            setUserBio(userData.userbio || '');
-            setUserPhone(userData.userphone || '');
-            setIsBlocked(userData.isBlocked || false);
-            setUserGroupId(userData.group || '');
-            setUserStatus(userData.status || 'online');
+        // Подписка на документ пользователя для реального времени
+        const userDocRef = doc(db, 'users', user.uid);
+        const unsubscribeUser = onSnapshot(
+          userDocRef,
+          async (userDoc) => {
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              setUserPosition(userData.position || 'не указано');
+              setProfilePic(userData.profile_pic || '');
+              setUserBio(userData.userbio || '');
+              setUserPhone(userData.userphone || '');
+              setIsBlocked(userData.isBlocked || false);
+              setUserGroupIds(userData.groups || []); // Устанавливаем массив групп
+              setUserStatus(userData.status || 'online');
 
-            if (userData.group) {
-              const groupDocRef = doc(db, 'groups', userData.group);
-              const groupDoc = await getDoc(groupDocRef);
-              if (groupDoc.exists()) {
-                setUserGroupName(groupDoc.data().name);
+              console.log('userData.groups:', userData.groups);
+
+              if (Array.isArray(userData.groups) && userData.groups.length > 0) {
+                // Получаем данные всех групп пользователя
+                const groupPromises = userData.groups.map(async (groupId) => {
+                  const groupDocRef = doc(db, 'groups', groupId);
+                  const groupDoc = await getDoc(groupDocRef);
+                  if (groupDoc.exists()) {
+                    const groupData = groupDoc.data();
+                    return { id: groupDoc.id, name: groupData.name || 'Неизвестная группа' };
+                  } else {
+                    console.error(`Группа с ID ${groupId} не найдена`);
+                    return { id: groupId, name: 'Неизвестная группа' };
+                  }
+                });
+
+                try {
+                  const groupsData = await Promise.all(groupPromises);
+                  setUserGroups(groupsData);
+                  console.log('userGroups:', groupsData);
+                } catch (error) {
+                  console.error('Ошибка при загрузке групп пользователя:', error);
+                  toast.error('Ошибка при загрузке групп пользователя');
+                  setUserGroups([]);
+                }
               } else {
-                setUserGroupName('Неизвестная группа');
+                setUserGroups([]);
               }
             } else {
-              setUserGroupName('');
+              // Если документ пользователя не найден, сбросить состояния
+              setUserPosition('');
+              setProfilePic('');
+              setUserBio('');
+              setUserPhone('');
+              setIsBlocked(false);
+              setUserGroupIds([]);
+              setUserGroups([]);
+              setUserStatus('Не в сети');
             }
-          } else {
-            // Если документ пользователя не найден, сбросить состояния
-            setUserPosition('');
-            setProfilePic('');
-            setUserBio('');
-            setUserPhone('');
-            setIsBlocked(false);
-            setUserGroupId('');
-            setUserGroupName('');
-            setUserStatus('Не в сети');
+            setIsLoading(false);
+          },
+          (error) => {
+            console.error('Ошибка при получении данных пользователя:', error);
+            toast.error('Ошибка при получении данных пользователя');
+            setIsLoading(false);
           }
-        } catch (error) {
-          console.error('Ошибка при получении данных:', error);
-        }
+        );
+
+        // Очистка подписки при размонтировании
+        return () => unsubscribeUser();
       } else {
         // Если пользователь не аутентифицирован, сбросить все состояния
         setUserName('Гость');
@@ -77,14 +113,15 @@ export default function useUserProfile() {
         setUserBio('');
         setUserPhone('');
         setIsBlocked(false);
-        setUserGroupId('');
-        setUserGroupName('');
+        setUserGroupIds([]);
+        setUserGroups([]);
         setUserStatus('Не в сети');
+        setIsLoading(false);
       }
-      setIsLoading(false);
     });
 
-    return () => unsubscribe();
+    // Очистка подписки аутентификации при размонтировании
+    return () => unsubscribeAuth();
   }, []);
 
   return {
@@ -97,8 +134,8 @@ export default function useUserProfile() {
     userBio,
     userPhone,
     isBlocked,
-    userGroupId,
-    userGroupName,
+    userGroupIds, // Массив ID групп
+    userGroups, // Массив объектов групп
     isLoading
   };
 }

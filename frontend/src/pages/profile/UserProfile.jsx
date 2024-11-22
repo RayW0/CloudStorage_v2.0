@@ -13,20 +13,11 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 export default function UserProfile() {
-  const {
-    userName,
-    userEmail,
-    userPosition,
-    profilePic,
-    userBio,
-    userPhone,
-    userGroupId,
-    userGroupName,
-    isLoading
-  } = useUserProfile();
+  const { userName, userEmail, userPosition, profilePic, userBio, userPhone, userGroupIds, userGroups, isLoading } = useUserProfile();
 
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState({
+    username: '',
     email: '',
     userphone: '',
     position: '',
@@ -62,7 +53,7 @@ export default function UserProfile() {
     setEditing(false);
     // Сброс формы к данным из хука
     setFormData({
-      username: displayName,
+      username: userName, // Исправлено на userName
       email: userEmail,
       userphone: userPhone,
       position: userPosition,
@@ -127,13 +118,9 @@ export default function UserProfile() {
         userphone: formData.userphone,
         position: formData.position,
         userbio: formData.userbio,
-        profile_pic: formData.profile_pic
+        profile_pic: formData.profile_pic,
+        groups: userGroupIds // Сохраняем массив групп
       };
-
-      // Если у пользователя есть группа, сохранить группу
-      if (userGroupId) {
-        updateData.group = userGroupId;
-      }
 
       await updateDoc(userDocRef, updateData);
 
@@ -162,21 +149,10 @@ export default function UserProfile() {
     handleSave();
   };
 
-  const fetchUserCount = async () => {
-    try {
-      const usersCollection = collection(db, 'users');
-      const snapshot = await getCountFromServer(usersCollection);
-      setUserCount(snapshot.data().count);
-    } catch (error) {
-      console.error('Ошибка при получении количества пользователей:', error);
-      toast.error('Не удалось получить количество пользователей');
-    } finally {
-      setLoadingUsers(false);
-    }
-  };
-  
   // Подготовка массива групп для передачи в ProfileForm
-  const userGroups = userGroupName ? [{ id: userGroupId, name: userGroupName }] : [];
+  const userGroupsToPass = userGroups; // Массив объектов групп
+
+  console.log('userGroupsToPass:', userGroupsToPass); // Отладка
 
   return (
     <>
@@ -190,7 +166,7 @@ export default function UserProfile() {
 
         <ProfileForm
           formData={formData}
-          userGroups={userGroups} // Передаём массив групп
+          userGroups={userGroupsToPass} // Передаём массив групп
           editing={editing}
           uploading={uploading}
           handleInputChange={handleInputChange}

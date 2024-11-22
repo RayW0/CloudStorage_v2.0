@@ -1,220 +1,223 @@
 // src/api/adminApi.js
-import axios from 'axios';
-import { toast } from 'react-toastify';
 
-const API_BASE_URL = 'http://localhost:5000';
+import { doc, updateDoc, arrayUnion, arrayRemove, addDoc, collection, deleteDoc, getDocs } from 'firebase/firestore';
+import { db } from '../firebaseConfig';
 
-const apiClient = axios.create({
-  baseURL: API_BASE_URL
-});
-
-// Функция для обработки ошибок
-const handleApiError = (error) => {
-  console.error('API Error:', error);
-  if (error.response) {
-    toast.error(error.response.data.error || 'Произошла ошибка при взаимодействии с сервером.');
-  } else if (error.request) {
-    toast.error('Сервер не отвечает. Попробуйте позже.');
-  } else {
-    toast.error('Произошла ошибка. Попробуйте ещё раз.');
-  }
-};
-
-// Получение списка пользователей
-export const getUsers = async (token) => {
+/**
+ * Назначает одну или несколько групп пользователю.
+ * @param {string} token - Токен аутентификации.
+ * @param {string} userId - Идентификатор пользователя.
+ * @param {string[]} groupIds - Массив идентификаторов групп.
+ */
+export const assignGroup = async (token, userId, groupIds) => {
   try {
-    const response = await apiClient.get('/get-users', {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
+    const userDocRef = doc(db, 'users', userId);
+    await updateDoc(userDocRef, {
+      groups: arrayUnion(...groupIds)
     });
-    return response.data.users;
+    return { success: true };
   } catch (error) {
-    handleApiError(error);
     throw error;
   }
 };
 
-// Получение списка групп
-export const getGroups = async (token) => {
+/**
+ * Удаляет группу из пользователя.
+ * @param {string} token - Токен аутентификации.
+ * @param {string} userId - Идентификатор пользователя.
+ * @param {string} groupId - Идентификатор группы.
+ */
+export const removeGroupFromUser = async (token, userId, groupId) => {
   try {
-    const response = await apiClient.get('/get-groups', {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
+    const userDocRef = doc(db, 'users', userId);
+    await updateDoc(userDocRef, {
+      groups: arrayRemove(groupId)
     });
-    return response.data.groups;
+    return { success: true };
   } catch (error) {
-    handleApiError(error);
     throw error;
   }
 };
 
-// Назначение роли пользователю
-export const assignRole = async (token, uid, role) => {
-  try {
-    const response = await apiClient.post(
-      '/assign-role',
-      { uid, role },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    );
-    toast.success(response.data.message || 'Роль успешно назначена!');
-    return response.data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
-};
-
-// Назначение группы пользователю
-export const assignGroup = async (token, uid, groupId) => {
-  try {
-    const response = await apiClient.post(
-      '/assign-group',
-      { uid, groupId },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    );
-    toast.success(response.data.message || 'Группа успешно назначена пользователю!');
-    return response.data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
-};
-
-// Создание новой группы
-export const createGroup = async (token, groupName, members) => {
-  try {
-    console.log('Создание группы с данными:', { name: groupName, members });
-    const response = await apiClient.post(
-      '/create-group',
-      { name: groupName, members: members },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    );
-    console.log('Ответ сервера:', response.data);
-    toast.success('Группа успешно создана!');
-    return response.data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
-};
-
-// Удаление группы
-export const deleteGroup = async (token, groupId) => {
-  try {
-    const response = await apiClient.post(
-      '/delete-group',
-      { groupId },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    );
-    toast.success(response.data.message || 'Группа успешно удалена!');
-    return response.data;
-  } catch (error) {
-    handleApiError(error);
-    throw error;
-  }
-};
-
-// Функция для удаления пользователя из группы
+/**
+ * Удаляет пользователя из группы.
+ * @param {string} token - Токен аутентификации.
+ * @param {string} groupId - Идентификатор группы.
+ * @param {string} userId - Идентификатор пользователя.
+ */
 export const removeUserFromGroup = async (token, groupId, userId) => {
   try {
-    const response = await axios.post(
-      `${API_BASE_URL}/remove-user-from-group`,
-      { groupId, userId },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-    console.log('Ответ сервера при удалении пользователя из группы:', response.data);
-    toast.success('Пользователь успешно удален из группы');
-    return response.data;
+    // Удаляем пользователя из группы
+    const groupDocRef = doc(db, 'groups', groupId);
+    await updateDoc(groupDocRef, {
+      members: arrayRemove(userId)
+    });
+
+    // Удаляем группу из пользователя
+    await removeGroupFromUser(token, userId, groupId);
+
+    return { success: true };
   } catch (error) {
-    console.error('Ошибка при удалении пользователя из группы:', error);
-    if (error.response && error.response.data && error.response.data.error) {
-      toast.error(`Ошибка: ${error.response.data.error}`);
-    } else {
-      toast.error('Ошибка при удалении пользователя из группы');
-    }
     throw error;
   }
 };
 
-// Удаление пользователя
-export const deleteUser = async (token, uid) => {
+/**
+ * Создаёт новую группу с указанными участниками.
+ * @param {string} token - Токен аутентификации.
+ * @param {string} groupName - Название группы.
+ * @param {string[]} members - Массив UID участников.
+ */
+export const createGroup = async (token, groupName, members) => {
   try {
-    const response = await apiClient.post(
-      '/delete-user',
-      { uid },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    );
-    toast.success(response.data.message || 'Пользователь успешно удален!');
-    return response.data;
+    const groupDocRef = await addDoc(collection(db, 'groups'), {
+      name: groupName,
+      members: members,
+      createdAt: new Date().toISOString()
+    });
+
+    return { id: groupDocRef.id, name: groupName, members };
   } catch (error) {
-    handleApiError(error);
     throw error;
   }
 };
 
-// Блокировка пользователя
-export const blockUser = async (token, uid) => {
+/**
+ * Назначает роль пользователю.
+ * @param {string} token - Токен аутентификации.
+ * @param {string} userId - Идентификатор пользователя.
+ * @param {string} role - Название роли.
+ */
+export const assignRole = async (token, userId, role) => {
   try {
-    const response = await apiClient.post(
-      '/block-user',
-      { uid },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    );
-    toast.success(response.data.message || 'Пользователь успешно заблокирован!');
-    return response.data;
+    const userDocRef = doc(db, 'users', userId);
+    await updateDoc(userDocRef, {
+      role: role
+    });
+    return { success: true };
   } catch (error) {
-    handleApiError(error);
     throw error;
   }
 };
 
-// Разблокировка пользователя
-export const unblockUser = async (token, uid) => {
+/**
+ * Получает всех пользователей.
+ * @param {string} token - Токен аутентификации.
+ */
+export const getUsers = async (token) => {
   try {
-    const response = await apiClient.post(
-      '/unblock-user',
-      { uid },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    );
-    toast.success(response.data.message || 'Пользователь успешно разблокирован!');
-    return response.data;
+    const usersSnapshot = await getDocs(collection(db, 'users'));
+    const users = usersSnapshot.docs.map((doc) => ({ uid: doc.id, ...doc.data() }));
+    return users;
   } catch (error) {
-    handleApiError(error);
+    throw error;
+  }
+};
+
+/**
+ * Получает все группы.
+ * @param {string} token - Токен аутентификации.
+ */
+export const getGroups = async (token) => {
+  try {
+    const groupsSnapshot = await getDocs(collection(db, 'groups'));
+    const groups = groupsSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    return groups;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Удаляет группу.
+ * @param {string} token - Токен аутентификации.
+ * @param {string} groupId - Идентификатор группы.
+ */
+export const deleteGroup = async (token, groupId) => {
+  try {
+    const groupDocRef = doc(db, 'groups', groupId);
+    await deleteDoc(groupDocRef);
+
+    // Также удаляем группу из всех пользователей, которые в неё входят
+    const usersSnapshot = await getDocs(collection(db, 'users'));
+    const updatePromises = usersSnapshot.docs.map((userDoc) => {
+      const userData = userDoc.data();
+      if (userData.groups && userData.groups.includes(groupId)) {
+        return updateDoc(userDoc.ref, {
+          groups: arrayRemove(groupId)
+        });
+      }
+      return null;
+    });
+
+    await Promise.all(updatePromises.filter((p) => p !== null));
+
+    return { success: true };
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Удаляет пользователя.
+ * @param {string} token - Токен аутентификации.
+ * @param {string} userId - Идентификатор пользователя.
+ */
+export const deleteUser = async (token, userId) => {
+  try {
+    const userDocRef = doc(db, 'users', userId);
+    await deleteDoc(userDocRef);
+
+    // Также удаляем пользователя из всех групп, в которых он состоит
+    const groupsSnapshot = await getDocs(collection(db, 'groups'));
+    const updatePromises = groupsSnapshot.docs.map((groupDoc) => {
+      const groupData = groupDoc.data();
+      if (groupData.members && groupData.members.includes(userId)) {
+        return updateDoc(groupDoc.ref, {
+          members: arrayRemove(userId)
+        });
+      }
+      return null;
+    });
+
+    await Promise.all(updatePromises.filter((p) => p !== null));
+
+    return { success: true };
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Блокирует пользователя.
+ * @param {string} token - Токен аутентификации.
+ * @param {string} userId - Идентификатор пользователя.
+ */
+export const blockUser = async (token, userId) => {
+  try {
+    const userDocRef = doc(db, 'users', userId);
+    await updateDoc(userDocRef, {
+      isBlocked: true
+    });
+    return { success: true };
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Разблокирует пользователя.
+ * @param {string} token - Токен аутентификации.
+ * @param {string} userId - Идентификатор пользователя.
+ */
+export const unblockUser = async (token, userId) => {
+  try {
+    const userDocRef = doc(db, 'users', userId);
+    await updateDoc(userDocRef, {
+      isBlocked: false
+    });
+    return { success: true };
+  } catch (error) {
     throw error;
   }
 };

@@ -25,7 +25,6 @@ import FileActions from 'components/files/FileActions';
 import ViewModeToggle from 'components/@extended/ViewModeToggle';
 import useFiles from 'hooks/useFiles';
 import useSort from 'hooks/useSort';
-import FileListView from 'components/FileListView';
 import GetFileIcon from 'utils/getFileIcon';
 
 const FileList = () => {

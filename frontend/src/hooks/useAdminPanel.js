@@ -1,17 +1,18 @@
 // src/hooks/useAdminPanel.js
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   getUsers,
   getGroups,
   assignRole,
-  assignGroup,
+  assignGroup, // Функция для назначения нескольких групп
   createGroup,
-  deleteGroup,
+  deleteGroup, // Добавлен импорт функции удаления группы
+  removeUserFromGroup,
   deleteUser,
   blockUser,
-  unblockUser,
-  removeUserFromGroup
+  unblockUser
 } from '../api/adminApi';
 import { toast } from 'react-toastify';
 
@@ -48,9 +49,9 @@ const useAdminPanel = () => {
     fetchData();
   }, [token, authIsLoading]);
 
-  const handleToggleMember = (userId) => {
+  const handleToggleMember = (groupId) => {
     setGroupMembers((prevSelected) =>
-      prevSelected.includes(userId) ? prevSelected.filter((id) => id !== userId) : [...prevSelected, userId]
+      prevSelected.includes(groupId) ? prevSelected.filter((id) => id !== groupId) : [...prevSelected, groupId]
     );
   };
 
@@ -72,20 +73,26 @@ const useAdminPanel = () => {
     }
   };
 
-  const handleAssignGroup = async () => {
-    if (!uid || !groupId) {
-      toast.error('Выберите пользователя и группу.');
+  const handleAssignGroups = async () => {
+    if (!uid || groupMembers.length === 0) {
+      toast.error('Выберите пользователя и группы.');
       return;
     }
 
     try {
-      await assignGroup(token, uid, groupId);
-      setUsers((prevUsers) => prevUsers.map((user) => (user.uid === uid ? { ...user, group: groupId } : user)));
+      await assignGroup(token, uid, groupMembers); // Назначение нескольких групп
+      setUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user.uid === uid ? { ...user, groups: user.groups ? [...new Set([...user.groups, ...groupMembers])] : [...groupMembers] } : user
+        )
+      );
       setUid('');
       setGroupId('');
+      setGroupMembers([]);
+      toast.success('Группы успешно назначены пользователю.');
     } catch (error) {
-      console.error('Ошибка при назначении группы:', error);
-      toast.error('Ошибка при назначении группы');
+      console.error('Ошибка при назначении групп:', error);
+      toast.error('Ошибка при назначении групп');
     }
   };
 
@@ -112,6 +119,7 @@ const useAdminPanel = () => {
         setGroups((prevGroups) => [...prevGroups, response]);
         setNewGroupName('');
         setGroupMembers([]);
+        toast.success('Группа успешно создана');
       } else {
         throw new Error('Некорректный ответ от сервера');
       }
@@ -123,7 +131,7 @@ const useAdminPanel = () => {
 
   const handleDeleteGroup = async (id) => {
     try {
-      await deleteGroup(token, id);
+      await deleteGroup(token, id); // Исправлено: вызываем функцию deleteGroup
       setGroups((prevGroups) => prevGroups.filter((group) => group.id !== id));
       toast.success('Группа успешно удалена');
     } catch (error) {
@@ -190,6 +198,12 @@ const useAdminPanel = () => {
       setGroups((prevGroups) =>
         prevGroups.map((group) => (group.id === groupId ? { ...group, members: group.members.filter((id) => id !== userId) } : group))
       );
+      setUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user.uid === userId ? { ...user, groups: user.groups ? user.groups.filter((id) => id !== groupId) : [] } : user
+        )
+      );
+      toast.success('Пользователь успешно удален из группы');
     } catch (error) {
       console.error('Ошибка при удалении пользователя из группы:', error);
       toast.error('Ошибка при удалении пользователя из группы');
@@ -212,13 +226,13 @@ const useAdminPanel = () => {
     handleToggleMember,
     isLoading,
     handleAssignRole,
-    handleAssignGroup,
+    handleAssignGroups,
     handleCreateGroup,
     handleDeleteGroup,
     handleDeleteUser,
     handleBlockUser,
     handleUnblockUser,
-    handleRemoveUserFromGroup // Добавляем функцию в возвращаемый объект
+    handleRemoveUserFromGroup
   };
 };
 

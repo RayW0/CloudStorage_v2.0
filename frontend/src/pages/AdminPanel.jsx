@@ -1,32 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+// src/components/AdminPanel.jsx
+
+import React, { useState } from 'react';
 import {
   Button,
-  Typography,
-  Stack,
-  Box,
-  FormControl,
   Select,
   MenuItem,
   Checkbox,
   ListItemText,
+  FormControl,
+  InputLabel,
+  OutlinedInput,
+  Typography,
+  Box,
+  TextField,
+  Grid,
+  Card,
+  CardContent,
+  CardActions,
+  List,
+  ListItem
 } from '@mui/material';
-import { CheckCircle } from '@mui/icons-material';
-import { toast } from 'react-toastify';
-import MainCard from 'components/MainCard';
-import UserSelect from 'components/adminPanel/UserSelect';
-import RoleSelect from 'components/adminPanel/RoleSelect';
-import GroupSelect from 'components/adminPanel/GroupSelect';
-import CreateGroupForm from 'components/adminPanel/CreateGroupForm';
-import GroupsList from 'components/adminPanel/GroupsList';
-import UserActions from 'components/adminPanel/UserActions';
-import ConfirmationDialog from 'components/adminPanel/ConfirmationDialog';
-import useAdminPanel from '../hooks/useAdminPanel';
-import { useAuth } from '../contexts/AuthContext';
+import useAdminPanel from 'hooks/useAdminPanel';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-export default function AdminPanel() {
-  const navigate = useNavigate();
-  const { currentUser, isLoading: authIsLoading, token } = useAuth();
+const AdminPanel = () => {
   const {
     uid,
     setUid,
@@ -40,169 +38,211 @@ export default function AdminPanel() {
     setNewGroupName,
     groupMembers,
     setGroupMembers,
+    handleToggleMember,
     isLoading,
     handleAssignRole,
-    handleAssignGroup,
+    handleAssignGroups,
     handleCreateGroup,
     handleDeleteGroup,
     handleDeleteUser,
     handleBlockUser,
     handleUnblockUser,
-    handleRemoveUserFromGroup,
+    handleRemoveUserFromGroup
   } = useAdminPanel();
 
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [blockDialogOpen, setBlockDialogOpen] = useState(false);
-  const [unblockDialogOpen, setUnblockDialogOpen] = useState(false);
+  const [selectedGroups, setSelectedGroups] = useState([]);
+  const [selectedGroupId, setSelectedGroupId] = useState(''); // Новое состояние для выбранной группы
 
-  useEffect(() => {
-    // Проверка на наличие токена и текущего пользователя
-    if (!authIsLoading && (!currentUser || !token)) {
-      toast.error('Вы не авторизованы. Пожалуйста, войдите в систему.');
-      navigate('/login');
-    }
-  }, [authIsLoading, currentUser, token, navigate]);
-
-  useEffect(() => {
-    console.log('groupMembers:', groupMembers);
-  }, [groupMembers]);
-
-  if (authIsLoading || !token || !currentUser) {
-    // Показать индикатор загрузки или сообщение, если пользователь не авторизован
-    return (
-      <MainCard style={{ padding: '30px', maxWidth: '800px', margin: '2% auto' }}>
-        <Typography variant="h5" align="center">
-          Загрузка...
-        </Typography>
-      </MainCard>
-    );
-  }
+  const handleGroupChange = (event) => {
+    const {
+      target: { value }
+    } = event;
+    setSelectedGroups(typeof value === 'string' ? value.split(',') : value);
+    setGroupMembers(typeof value === 'string' ? value.split(',') : value);
+  };
 
   return (
-    <MainCard style={{ padding: '30px', maxWidth: '800px', margin: '2% auto' }}>
-      <Typography variant="h4" align="center" gutterBottom>
-        Панель администратора
-      </Typography>
+    <Card sx={{ padding: 4, maxWidth: 1200, margin: '0 auto' }}>
+      <CardContent>
+        <Typography variant="h4" gutterBottom align="center">
+          Админ панель
+        </Typography>
 
-      <Stack spacing={3} mt={2}>
-        {/* Селектор Пользователя */}
-        <UserSelect uid={uid} setUid={setUid} users={users} disabled={isLoading} />
+        {/* Назначение групп пользователю */}
+        <FormControl fullWidth sx={{ mb: 3 }}>
+          <InputLabel id="assign-groups-label">Выберите группы</InputLabel>
+          <Select
+            labelId="assign-groups-label"
+            multiple
+            value={selectedGroups}
+            onChange={handleGroupChange}
+            input={<OutlinedInput label="Выберите группы" />}
+            renderValue={(selected) =>
+              selected
+                .map((id) => {
+                  const group = groups.find((g) => g.id === id);
+                  return group ? group.name : id;
+                })
+                .join(', ')
+            }
+          >
+            {groups.map((group) => (
+              <MenuItem key={group.id} value={group.id}>
+                <Checkbox checked={selectedGroups.indexOf(group.id) > -1} />
+                <ListItemText primary={group.name} />
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
 
-        {/* Селектор Роли */}
-        <RoleSelect role={role} setRole={setRole} disabled={isLoading || !uid} />
-
-        {/* Кнопка Назначения Роли */}
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<CheckCircle />}
-          fullWidth
-          onClick={handleAssignRole}
-          disabled={isLoading || !uid || !role}
-        >
-          Назначить роль
+        <Button variant="contained" onClick={handleAssignGroups} disabled={isLoading || selectedGroups.length === 0 || !uid} sx={{ mb: 4 }}>
+          Назначить выбранные группы
         </Button>
 
-        {/* Селектор Группы */}
-        <GroupSelect groupId={groupId} setGroupId={setGroupId} groups={groups} disabled={isLoading || !uid} />
-
-        {/* Кнопка Назначения Группы */}
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<CheckCircle />}
-          fullWidth
-          onClick={handleAssignGroup}
-          disabled={isLoading || !uid || !groupId}
-        >
-          Назначить группу
-        </Button>
-
-        {/* Поле для создания новой группы */}
-        <Box sx={{ border: '1px solid #ccc', padding: '20px', borderRadius: '8px' }}>
-          <Typography variant="h6" gutterBottom>
-            Создать новую группу
-          </Typography>
-          <CreateGroupForm
-            newGroupName={newGroupName}
-            setNewGroupName={setNewGroupName}
-            handleCreateGroup={() => handleCreateGroup(newGroupName, groupMembers)}
-          />
-
-          {/* Выбор участников группы */}
-          <FormControl fullWidth sx={{ mt: 2 }}>
-            <Typography variant="subtitle1" gutterBottom>
-              Выберите участников группы:
-            </Typography>
-            <Select
-              multiple
-              value={groupMembers}
-              onChange={(e) => setGroupMembers(e.target.value)}
-              renderValue={(selected) =>
-                users
-                  .filter((user) => selected.includes(user.uid))
-                  .map((user) => user.username)
-                  .join(', ')
-              }
+        {/* Создание новой группы */}
+        <Typography variant="h6" gutterBottom>
+          Создать новую группу
+        </Typography>
+        <Grid container spacing={2} alignItems="center" sx={{ mb: 4 }}>
+          <Grid item xs={8}>
+            <TextField
+              fullWidth
+              variant="outlined"
+              label="Название новой группы"
+              value={newGroupName}
+              onChange={(e) => setNewGroupName(e.target.value)}
+            />
+          </Grid>
+          <Grid item xs={4}>
+            <Button
+              variant="contained"
+              onClick={handleCreateGroup}
+              disabled={isLoading || !newGroupName.trim() || groupMembers.length === 0}
             >
-              {users.map((user) => (
-                <MenuItem key={user.uid} value={user.uid}>
-                  <Checkbox checked={groupMembers.includes(user.uid)} />
-                  <ListItemText primary={user.username} />
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
+              Создать группу
+            </Button>
+          </Grid>
+        </Grid>
+        <FormControl fullWidth sx={{ mb: 3 }}>
+          <InputLabel id="create-group-members-label">Выберите участников</InputLabel>
+          <Select
+            labelId="create-group-members-label"
+            multiple
+            value={groupMembers}
+            onChange={(e) => setGroupMembers(e.target.value)}
+            input={<OutlinedInput label="Выберите участников" />}
+            renderValue={(selected) =>
+              selected
+                .map((id) => {
+                  const user = users.find((u) => u.uid === id);
+                  return user ? user.displayName || user.username : id;
+                })
+                .join(', ')
+            }
+          >
+            {users.map((user) => (
+              <MenuItem key={user.uid} value={user.uid}>
+                <Checkbox checked={groupMembers.indexOf(user.uid) > -1} />
+                <ListItemText primary={user.displayName || user.username} />
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
 
-        {/* Отображение списка групп с возможностью удаления и управления участниками */}
-        <GroupsList
-          groups={groups}
-          handleDeleteGroup={handleDeleteGroup}
-          handleRemoveUserFromGroup={handleRemoveUserFromGroup}
-          users={users} // Передаем список пользователей для отображения имен
-        />
+        {/* Отображение списка групп */}
+        <Typography variant="h6" gutterBottom>
+          Список групп:
+        </Typography>
+        {groups.map((group) => (
+          <Box key={group.id} sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <Typography variant="body1" sx={{ flex: 1 }}>
+              {group.name}
+            </Typography>
+            <Button variant="outlined" color="error" onClick={() => handleDeleteGroup(group.id)}>
+              Удалить
+            </Button>
+          </Box>
+        ))}
 
-        {/* Кнопки управления пользователями */}
-        <UserActions
-          uid={uid}
-          handleDeleteUser={() => setDeleteDialogOpen(true)}
-          handleBlockUser={() => setBlockDialogOpen(true)}
-          handleUnblockUser={() => setUnblockDialogOpen(true)}
-          isBlocked={users.find((user) => user.uid === uid)?.isBlocked}
-        />
-      </Stack>
+        {/* Отображение списка пользователей */}
+        <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
+          Список пользователей:
+        </Typography>
+        {users.map((user) => (
+          <Box key={user.uid} sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <Typography variant="body1" sx={{ flex: 1 }}>
+              {user.displayName || user.username} ({user.email})
+            </Typography>
+            <Button variant="outlined" color="secondary" onClick={() => setUid(user.uid)} sx={{ mr: 1 }}>
+              Управлять
+            </Button>
+          </Box>
+        ))}
 
-      {/* Диалоги подтверждения */}
-      <ConfirmationDialog
-        open={deleteDialogOpen}
-        title="Подтверждение удаления"
-        content="Вы уверены, что хотите удалить этого пользователя? Это действие нельзя отменить."
-        onClose={() => setDeleteDialogOpen(false)}
-        onConfirm={handleDeleteUser}
-        confirmText="Удалить"
-        cancelText="Отмена"
-      />
+        {/* Выпадающий список для выбора группы и отображения пользователей в ней */}
+        <FormControl fullWidth sx={{ mt: 4, mb: 3 }}>
+          <InputLabel id="view-group-users-label">Выберите группу для просмотра пользователей</InputLabel>
+          <Select
+            labelId="view-group-users-label"
+            value={selectedGroupId}
+            onChange={(e) => setSelectedGroupId(e.target.value)}
+            input={<OutlinedInput label="Выберите группу для просмотра пользователей" />}
+          >
+            {groups.map((group) => (
+              <MenuItem key={group.id} value={group.id}>
+                {group.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
 
-      <ConfirmationDialog
-        open={blockDialogOpen}
-        title="Подтверждение блокировки"
-        content="Вы уверены, что хотите заблокировать этого пользователя?"
-        onClose={() => setBlockDialogOpen(false)}
-        onConfirm={handleBlockUser}
-        confirmText="Заблокировать"
-        cancelText="Отмена"
-      />
+        {selectedGroupId && (
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              Пользователи в группе: {groups.find((g) => g.id === selectedGroupId)?.name}
+            </Typography>
+            {users.filter((user) => Array.isArray(user.groups) && user.groups.includes(selectedGroupId)).length > 0 ? (
+              <List>
+                {users
+                  .filter((user) => Array.isArray(user.groups) && user.groups.includes(selectedGroupId))
+                  .map((user) => (
+                    <ListItem key={user.uid}>
+                      <ListItemText primary={`${user.displayName || user.username} (${user.email})`} />
+                      {/* Добавьте дополнительные действия, если необходимо */}
+                    </ListItem>
+                  ))}
+              </List>
+            ) : (
+              <Typography>В данной группе нет пользователей.</Typography>
+            )}
+          </Box>
+        )}
 
-      <ConfirmationDialog
-        open={unblockDialogOpen}
-        title="Подтверждение разблокировки"
-        content="Вы уверены, что хотите разблокировать этого пользователя?"
-        onClose={() => setUnblockDialogOpen(false)}
-        onConfirm={handleUnblockUser}
-        confirmText="Разблокировать"
-        cancelText="Отмена"
-      />
-    </MainCard>
+        {/* Управление выбранным пользователем */}
+        {uid && (
+          <Box sx={{ mt: 4 }}>
+            <Typography variant="h6" gutterBottom>
+              Управление пользователем
+            </Typography>
+            <CardActions>
+              <Button variant="contained" color="error" onClick={handleDeleteUser} disabled={isLoading}>
+                Удалить пользователя
+              </Button>
+              <Button variant="contained" color="warning" onClick={handleBlockUser} disabled={isLoading} sx={{ ml: 2 }}>
+                Заблокировать пользователя
+              </Button>
+              <Button variant="contained" color="success" onClick={handleUnblockUser} disabled={isLoading} sx={{ ml: 2 }}>
+                Разблокировать пользователя
+              </Button>
+            </CardActions>
+          </Box>
+        )}
+      </CardContent>
+
+      {/* Контейнер для уведомлений */}
+      <ToastContainer />
+    </Card>
   );
-}
+};
+
+export default AdminPanel;
