@@ -4,9 +4,9 @@ import { lazy } from 'react';
 import Loadable from 'components/Loadable';
 import Dashboard from 'layout/Dashboard';
 import AdminPanel from 'pages/AdminPanel';
+import AdminRoute from 'routes/AdminRoute';
 
 const DashboardDefault = Loadable(lazy(() => import('pages/dashboard/index')));
-
 
 // render - sample page
 const SamplePage = Loadable(lazy(() => import('pages/extra-pages/sample-page')));
@@ -31,13 +31,13 @@ const MainRoutes = {
       ]
     },
     {
-      path: 'sample-page',
-      element: <SamplePage />
-    },
-    {
       path: 'admin',
-      element: <AdminPanel />
-    },
+      element: (
+        <AdminRoute>
+          <AdminPanel />
+        </AdminRoute>
+      )
+    }
   ]
 };
 

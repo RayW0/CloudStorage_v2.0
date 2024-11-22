@@ -7,103 +7,116 @@ import { db, storage, auth } from '../firebaseConfig';
 import { toast } from 'react-toastify';
 import { onAuthStateChanged } from 'firebase/auth';
 
-const useFiles = (currentDirectory = '/') => {
+const useFiles = () => {
   const [folders, setFolders] = useState([]);
   const [files, setFiles] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
-  const [groupId, setGroupId] = useState(null);
+  const [userGroups, setUserGroups] = useState([]); // Массив групп пользователя
+  const [currentDirectory, setCurrentDirectory] = useState('/');
 
-  // Слушатель аутентификации
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setCurrentUser(user);
-        await fetchUserGroupId(user.uid);
-        await fetchFolders();
-        await fetchFiles();
-      } else {
-        setCurrentUser(null);
-        setGroupId(null);
-        setFolders([]);
-        setFiles([]);
-      }
-    });
-
-    return () => unsubscribe();
-  }, [currentDirectory, groupId]);
-
-  // Получение groupId пользователя
-  const fetchUserGroupId = useCallback(async (uid) => {
+  // Получение групп пользователя
+  const fetchUserGroups = useCallback(async (uid) => {
     try {
       const userDocRef = doc(db, 'users', uid);
       const userDoc = await getDoc(userDocRef);
 
       if (userDoc.exists()) {
         const userData = userDoc.data();
-        setGroupId(userData.groupId || null);
+        const groupIds = userData.groups || [];
+
+        if (groupIds.length === 0) {
+          setUserGroups([]);
+          return;
+        }
+
+        // Получаем названия групп по их ID
+        const groupsCollection = collection(db, 'groups');
+        const groupsQuery = query(groupsCollection, where('__name__', 'in', groupIds.length <= 10 ? groupIds : groupIds.slice(0, 10))); // Firestore ограничивает 'in' до 10 элементов
+
+        const groupsSnapshot = await getDocs(groupsQuery);
+        const groupsData = [];
+
+        groupsSnapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          groupsData.push({ id: docSnap.id, name: data.name });
+        });
+
+        // Если групп больше 10, повторяем запрос
+        if (groupIds.length > 10) {
+          for (let i = 10; i < groupIds.length; i += 10) {
+            const batchGroupIds = groupIds.slice(i, i + 10);
+            const batchQuery = query(groupsCollection, where('__name__', 'in', batchGroupIds));
+            const batchSnapshot = await getDocs(batchQuery);
+            batchSnapshot.forEach((docSnap) => {
+              const data = docSnap.data();
+              groupsData.push({ id: docSnap.id, name: data.name });
+            });
+          }
+        }
+
+        setUserGroups(groupsData);
       } else {
         console.error('Документ пользователя не найден');
-        setGroupId(null);
+        setUserGroups([]);
       }
     } catch (error) {
-      console.error('Ошибка при получении groupId пользователя:', error);
-      setGroupId(null);
+      console.error('Ошибка при получении групп пользователя:', error);
+      setUserGroups([]);
     }
   }, []);
 
- // Получение папок
- const fetchFolders = useCallback(async () => {
-  if (!currentUser) return;
-  setIsLoading(true);
-  try {
-    const currentPath = currentDirectory || '/';
+  // Получение папок
+  const fetchFolders = useCallback(async () => {
+    if (!currentUser) return;
+    setIsLoading(true);
+    try {
+      const currentPath = currentDirectory || '/';
 
-    const folderQueries = [
-      query(
-        collection(db, 'folders'),
-        where('directory', '==', currentPath),
-        where('isDeleted', '==', false),
-        where('ownerId', '==', currentUser.uid)
-      )
-    ];
-
-    if (groupId) {
-      folderQueries.push(
+      const folderQueries = [
         query(
           collection(db, 'folders'),
           where('directory', '==', currentPath),
           where('isDeleted', '==', false),
-          where('groupId', '==', groupId)
+          where('ownerId', '==', currentUser.uid)
         )
-      );
-    }
+      ];
 
-    const querySnapshots = await Promise.all(folderQueries.map((q) => getDocs(q)));
-    const folderMap = new Map();
+      if (userGroups.length > 0) {
+        userGroups.forEach((group) => {
+          folderQueries.push(
+            query(
+              collection(db, 'folders'),
+              where('directory', '==', currentPath),
+              where('isDeleted', '==', false),
+              where('groupId', '==', group.id)
+            )
+          );
+        });
+      }
 
-    querySnapshots.forEach((snapshot) => {
-      snapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        const id = docSnap.id;
-        // Проверяем, добавляли ли мы уже папку с таким ID
-        if (!folderMap.has(id)) {
-          folderMap.set(id, { id, type: 'folder', ...data });
-        }
+      const querySnapshots = await Promise.all(folderQueries.map((q) => getDocs(q)));
+      const folderMap = new Map();
+
+      querySnapshots.forEach((snapshot) => {
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          const id = docSnap.id;
+          if (!folderMap.has(id)) {
+            folderMap.set(id, { id, type: 'folder', ...data });
+          }
+        });
       });
-    });
 
-    const fetchedFolders = Array.from(folderMap.values());
-
-    setFolders(fetchedFolders);
-  } catch (error) {
-    console.error('Ошибка при получении папок:', error);
-    toast.error(`Не удалось получить папки: ${error.message}`);
-  } finally {
-    setIsLoading(false);
-  }
-}, [currentUser, groupId, currentDirectory]);
-
+      const fetchedFolders = Array.from(folderMap.values());
+      setFolders(fetchedFolders);
+    } catch (error) {
+      console.error('Ошибка при получении папок:', error);
+      toast.error(`Не удалось получить папки: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentUser, userGroups, currentDirectory]);
 
   // Получение файлов
   const fetchFiles = useCallback(async () => {
@@ -121,15 +134,17 @@ const useFiles = (currentDirectory = '/') => {
         )
       ];
 
-      if (groupId) {
-        fileQueries.push(
-          query(
-            collection(db, 'files'),
-            where('directory', '==', currentPath),
-            where('isDeleted', '==', false),
-            where('groupId', '==', groupId)
-          )
-        );
+      if (userGroups.length > 0) {
+        userGroups.forEach((group) => {
+          fileQueries.push(
+            query(
+              collection(db, 'files'),
+              where('directory', '==', currentPath),
+              where('isDeleted', '==', false),
+              where('groupId', '==', group.id)
+            )
+          );
+        });
       }
 
       const querySnapshots = await Promise.all(fileQueries.map((q) => getDocs(q)));
@@ -139,7 +154,6 @@ const useFiles = (currentDirectory = '/') => {
         snapshot.forEach((docSnap) => {
           const data = docSnap.data();
           const id = docSnap.id;
-          // Проверяем, добавляли ли мы уже файл с таким ID
           if (!fileMap.has(id)) {
             fileMap.set(id, { id, type: 'file', ...data });
           }
@@ -147,7 +161,6 @@ const useFiles = (currentDirectory = '/') => {
       });
 
       const fetchedFiles = Array.from(fileMap.values());
-
       setFiles(fetchedFiles);
     } catch (error) {
       console.error('Ошибка при получении файлов:', error);
@@ -155,8 +168,34 @@ const useFiles = (currentDirectory = '/') => {
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser, groupId, currentDirectory]);
+  }, [currentUser, userGroups, currentDirectory]);
 
+  // Слушатель аутентификации
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        console.log('Пользователь вошёл:', user.uid);
+        setCurrentUser(user);
+        await fetchUserGroups(user.uid);
+      } else {
+        console.log('Пользователь вышел');
+        setCurrentUser(null);
+        setUserGroups([]);
+        setFolders([]);
+        setFiles([]);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [fetchUserGroups]);
+
+  // Загрузка папок и файлов при изменении currentDirectory или userGroups
+  useEffect(() => {
+    if (currentUser) {
+      fetchFolders();
+      fetchFiles();
+    }
+  }, [currentDirectory, userGroups, currentUser, fetchFolders, fetchFiles]);
 
   // Создание папки
   const handleCreateFolder = useCallback(
@@ -343,6 +382,30 @@ const useFiles = (currentDirectory = '/') => {
     [currentUser]
   );
 
+  // Итеративное обновление groupId для вложенных элементов
+  const shareFolderIteratively = useCallback(async (folderPath, groupId, batch) => {
+    try {
+      // Обновляем groupId для файлов
+      const filesQuery = query(collection(db, 'files'), where('directory', '==', folderPath), where('isDeleted', '==', false));
+      const filesSnapshot = await getDocs(filesQuery);
+      filesSnapshot.forEach((fileDoc) => {
+        batch.update(fileDoc.ref, { groupId: groupId });
+      });
+
+      // Обновляем groupId для папок
+      const foldersQuery = query(collection(db, 'folders'), where('directory', '==', folderPath), where('isDeleted', '==', false));
+      const foldersSnapshot = await getDocs(foldersQuery);
+      for (const folderDoc of foldersSnapshot.docs) {
+        batch.update(folderDoc.ref, { groupId: groupId });
+        const folderData = folderDoc.data();
+        await shareFolderIteratively(folderData.folderPath, groupId, batch);
+      }
+    } catch (error) {
+      console.error('Ошибка при совместном использовании содержимого папки:', error);
+      throw error;
+    }
+  }, []);
+
   // Рекурсивное помечение содержимого папки как удалённого
   const markFolderAsDeleted = useCallback(async (folderPath) => {
     try {
@@ -454,6 +517,30 @@ const useFiles = (currentDirectory = '/') => {
     [currentUser]
   );
 
+  // Итеративное обновление groupId для вложенных элементов
+  const unshareFolderIteratively = useCallback(async (folderPath, batch) => {
+    try {
+      // Обновляем groupId для файлов
+      const filesQuery = query(collection(db, 'files'), where('directory', '==', folderPath), where('isDeleted', '==', false));
+      const filesSnapshot = await getDocs(filesQuery);
+      filesSnapshot.forEach((fileDoc) => {
+        batch.update(fileDoc.ref, { groupId: null });
+      });
+
+      // Обновляем groupId для папок
+      const foldersQuery = query(collection(db, 'folders'), where('directory', '==', folderPath), where('isDeleted', '==', false));
+      const foldersSnapshot = await getDocs(foldersQuery);
+      for (const folderDoc of foldersSnapshot.docs) {
+        batch.update(folderDoc.ref, { groupId: null });
+        const folderData = folderDoc.data();
+        await unshareFolderIteratively(folderData.folderPath, batch);
+      }
+    } catch (error) {
+      console.error('Ошибка при закрытии доступа к содержимому папки:', error);
+      throw error;
+    }
+  }, []);
+
   // Восстановление папки из корзины
   const handleRestoreFolder = useCallback(
     async (folderId) => {
@@ -519,7 +606,7 @@ const useFiles = (currentDirectory = '/') => {
           isDeleted: false,
           deletedAt: null
         });
-        // Рекурсивно восстанавливаем содержимое вложенных папок
+        const childFolderData = childFolderDoc.data();
         await restoreFolderContents(childFolderDoc.ref);
       });
 
@@ -603,14 +690,16 @@ const useFiles = (currentDirectory = '/') => {
 
   // Совместное использование папки с группой
   const handleShareFolderToGroup = useCallback(
-    async (folderId) => {
+    async (folderId, targetGroupId) => {
+      // Добавлен параметр targetGroupId
       if (!currentUser) {
         toast.error('Пользователь не авторизован.');
         return;
       }
 
-      if (!groupId) {
-        toast.error('Пользователь не принадлежит ни одной группе.');
+      if (!targetGroupId) {
+        // Проверка наличия целевой группы
+        toast.error('Не указана целевая группа для совместного использования.');
         return;
       }
 
@@ -620,8 +709,8 @@ const useFiles = (currentDirectory = '/') => {
         return;
       }
 
-      if (folder.groupId === groupId) {
-        toast.info('Папка уже доступна вашей группе.');
+      if (folder.groupId === targetGroupId) {
+        toast.info('Папка уже доступна этой группе.');
         return;
       }
 
@@ -631,10 +720,10 @@ const useFiles = (currentDirectory = '/') => {
 
         // Обновляем groupId для самой папки
         const folderRef = doc(db, 'folders', folder.id);
-        batch.update(folderRef, { groupId: groupId });
+        batch.update(folderRef, { groupId: targetGroupId });
 
         // Итеративно обновляем groupId для всех вложенных папок и файлов
-        await shareFolderIteratively(folder.folderPath, groupId, batch);
+        await shareFolderIteratively(folder.folderPath, targetGroupId, batch);
 
         // Выполняем пакетное обновление
         await batch.commit();
@@ -643,7 +732,7 @@ const useFiles = (currentDirectory = '/') => {
         await fetchFolders();
         await fetchFiles();
 
-        toast.success(`Папка "${folder.name}" успешно поделена с вашей группой.`);
+        toast.success(`Папка "${folder.name}" успешно поделена с группой.`);
       } catch (error) {
         console.error('Ошибка при совместном использовании папки:', error);
         toast.error(`Не удалось поделиться папкой: ${error.message}`);
@@ -651,36 +740,13 @@ const useFiles = (currentDirectory = '/') => {
         setIsLoading(false);
       }
     },
-    [currentUser, groupId, folders, fetchFolders, fetchFiles]
+    [currentUser, folders, fetchFolders, fetchFiles, shareFolderIteratively]
   );
-
-  // Итеративное обновление groupId для вложенных элементов
-  const shareFolderIteratively = useCallback(async (folderPath, groupId, batch) => {
-    try {
-      // Обновляем groupId для файлов
-      const filesQuery = query(collection(db, 'files'), where('directory', '==', folderPath), where('isDeleted', '==', false));
-      const filesSnapshot = await getDocs(filesQuery);
-      filesSnapshot.forEach((fileDoc) => {
-        batch.update(fileDoc.ref, { groupId: groupId });
-      });
-
-      // Обновляем groupId для папок
-      const foldersQuery = query(collection(db, 'folders'), where('directory', '==', folderPath), where('isDeleted', '==', false));
-      const foldersSnapshot = await getDocs(foldersQuery);
-      for (const folderDoc of foldersSnapshot.docs) {
-        batch.update(folderDoc.ref, { groupId: groupId });
-        const folderData = folderDoc.data();
-        await shareFolderIteratively(folderData.folderPath, groupId, batch);
-      }
-    } catch (error) {
-      console.error('Ошибка при совместном использовании содержимого папки:', error);
-      throw error;
-    }
-  }, []);
 
   // Закрытие доступа к папке
   const handleUnshareFolderFromGroup = useCallback(
-    async (folderId) => {
+    async (folderId, targetGroupId) => {
+      // Добавлен параметр targetGroupId
       if (!currentUser) {
         toast.error('Пользователь не авторизован.');
         return;
@@ -723,32 +789,8 @@ const useFiles = (currentDirectory = '/') => {
         setIsLoading(false);
       }
     },
-    [currentUser, folders, fetchFolders, fetchFiles]
+    [currentUser, folders, fetchFolders, fetchFiles, unshareFolderIteratively]
   );
-
-  // Итеративное обновление groupId для вложенных элементов
-  const unshareFolderIteratively = useCallback(async (folderPath, batch) => {
-    try {
-      // Обновляем groupId для файлов
-      const filesQuery = query(collection(db, 'files'), where('directory', '==', folderPath), where('isDeleted', '==', false));
-      const filesSnapshot = await getDocs(filesQuery);
-      filesSnapshot.forEach((fileDoc) => {
-        batch.update(fileDoc.ref, { groupId: null });
-      });
-
-      // Обновляем groupId для папок
-      const foldersQuery = query(collection(db, 'folders'), where('directory', '==', folderPath), where('isDeleted', '==', false));
-      const foldersSnapshot = await getDocs(foldersQuery);
-      for (const folderDoc of foldersSnapshot.docs) {
-        batch.update(folderDoc.ref, { groupId: null });
-        const folderData = folderDoc.data();
-        await unshareFolderIteratively(folderData.folderPath, batch);
-      }
-    } catch (error) {
-      console.error('Ошибка при закрытии доступа к содержимому папки:', error);
-      throw error;
-    }
-  }, []);
 
   // Скачивание файла
   const handleDownloadFile = useCallback(async (file) => {
@@ -790,13 +832,16 @@ const useFiles = (currentDirectory = '/') => {
     handleDownloadFile,
     handleCopyLink,
     handleCreateFolder,
-    handleShareFolderToGroup,
-    handleUnshareFolderFromGroup,
+    handleShareFolderToGroup, // Теперь требует groupId
+    handleUnshareFolderFromGroup, // Теперь требует groupId
     handleRestoreFile,
     handlePermanentDeleteFile,
     handleRestoreFolder,
     handlePermanentDeleteFolder,
-    currentUser
+    currentUser,
+    userGroups, // Добавлено для доступа к группам пользователя
+    currentDirectory,
+    setCurrentDirectory // Добавлено для изменения текущей директории
   };
 };
 

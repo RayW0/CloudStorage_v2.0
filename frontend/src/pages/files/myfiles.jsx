@@ -15,7 +15,15 @@ import {
   CircularProgress,
   Grid,
   Box,
-  Tooltip
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel
 } from '@mui/material';
 import { DownloadOutlined, DeleteOutlined, ShareAltOutlined, LinkOutlined } from '@ant-design/icons';
 import MainCard from 'components/MainCard';
@@ -26,6 +34,7 @@ import ViewModeToggle from 'components/@extended/ViewModeToggle';
 import useFiles from 'hooks/useFiles';
 import useSort from 'hooks/useSort';
 import GetFileIcon from 'utils/getFileIcon';
+import { toast } from 'react-toastify';
 
 const FileList = () => {
   // Определение состояния
@@ -34,12 +43,12 @@ const FileList = () => {
   const [selectedFolderIds, setSelectedFolderIds] = useState([]); // Массив выбранных папок (ID)
   const [selectedFileIds, setSelectedFileIds] = useState([]); // Массив выбранных файлов (ID)
   const [selectAll, setSelectAll] = useState(false);
-
-  // Инициализация currentDirectory как '/'
-  const [currentDirectory, setCurrentDirectory] = useState('/');
   const [viewMode, setViewMode] = useState('list'); // 'list' или 'grid'
+  const [openShareModal, setOpenShareModal] = useState(false); // Состояние модального окна
+  const [selectedFolderId, setSelectedFolderId] = useState(null); // ID папки для совместного использования
+  const [selectedGroupId, setSelectedGroupId] = useState(''); // Выбранная группа для совместного использования
 
-  // Использование вашего хука useFiles, передавая currentDirectory
+  // Использование хука useFiles
   const {
     folders,
     files,
@@ -52,8 +61,15 @@ const FileList = () => {
     handleCreateFolder,
     handleShareFolderToGroup,
     handleUnshareFolderFromGroup,
-    currentUser
-  } = useFiles(currentDirectory);
+    handleRestoreFile,
+    handlePermanentDeleteFile,
+    handleRestoreFolder,
+    handlePermanentDeleteFolder,
+    currentUser,
+    userGroups, // Теперь это массив объектов { id, name }
+    currentDirectory,
+    setCurrentDirectory
+  } = useFiles();
 
   // Отсортированные папки и файлы
   const sortedFolders = useSort(folders, sortField, sortOrder);
@@ -85,7 +101,7 @@ const FileList = () => {
       console.log('Navigating to:', newPath);
       setCurrentDirectory(newPath); // Обновляем currentDirectory
     },
-    [currentDirectory]
+    [currentDirectory, setCurrentDirectory]
   );
 
   // Функция для навигации назад
@@ -163,6 +179,39 @@ const FileList = () => {
       date = new Date(timestamp);
     }
     return date.toLocaleString();
+  };
+
+  // Функция для открытия модального окна совместного использования
+  const openShareFolderModal = (folderId) => {
+    setSelectedFolderId(folderId);
+    setSelectedGroupId('');
+    setOpenShareModal(true);
+  };
+
+  // Функция для закрытия модального окна
+  const closeShareFolderModal = () => {
+    setOpenShareModal(false);
+    setSelectedFolderId(null);
+    setSelectedGroupId('');
+  };
+
+  // Обработчик подтверждения совместного использования
+  const confirmShareFolder = async () => {
+    if (!selectedGroupId) {
+      toast.error('Пожалуйста, выберите группу для совместного использования.');
+      return;
+    }
+    await handleShareFolderToGroup(selectedFolderId, selectedGroupId);
+    closeShareFolderModal();
+  };
+
+  // Функция для обработки совместного использования папки
+  const handleShareFolder = (folderId) => {
+    if (userGroups.length === 0) {
+      toast.error('Пользователь не принадлежит ни к каким группам.');
+      return;
+    }
+    openShareFolderModal(folderId);
   };
 
   return (
@@ -277,31 +326,21 @@ const FileList = () => {
                         <Stack direction="row" spacing={1}>
                           {folder.ownerId === currentUser?.uid && (
                             <>
-                              {folder.groupId === null ? (
-                                <Tooltip title="Поделиться с группой">
-                                  <IconButton
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleShareFolderToGroup(folder.id);
-                                    }}
-                                    color="primary"
-                                  >
-                                    <ShareAltOutlined />
-                                  </IconButton>
-                                </Tooltip>
-                              ) : (
-                                <Tooltip title="Закрыть доступ">
-                                  <IconButton
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleUnshareFolderFromGroup(folder.id);
-                                    }}
-                                    color="secondary"
-                                  >
-                                    <ShareAltOutlined />
-                                  </IconButton>
-                                </Tooltip>
-                              )}
+                              <Tooltip title={folder.groupId === null ? 'Поделиться с группой' : 'Закрыть доступ'}>
+                                <IconButton
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (folder.groupId === null) {
+                                      handleShareFolder(folder.id);
+                                    } else {
+                                      handleUnshareFolderFromGroup(folder.id, folder.groupId);
+                                    }
+                                  }}
+                                  color={folder.groupId === null ? 'primary' : 'secondary'}
+                                >
+                                  <ShareAltOutlined />
+                                </IconButton>
+                              </Tooltip>
                             </>
                           )}
                           {folder.groupId !== null && (
@@ -426,7 +465,7 @@ const FileList = () => {
                             <IconButton
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleShareFolderToGroup(folder.id);
+                                handleShareFolder(folder.id);
                               }}
                               title="Поделиться с группой"
                               color="primary"
@@ -530,6 +569,34 @@ const FileList = () => {
           )}
         </>
       )}
+
+      {/* Модальное окно для совместного использования папки */}
+      <Dialog open={openShareModal} onClose={closeShareFolderModal}>
+        <DialogTitle>Поделиться папкой с группой</DialogTitle>
+        <DialogContent>
+          <FormControl fullWidth>
+            <InputLabel id="select-share-group-label">Выберите группу</InputLabel>
+            <Select
+              labelId="select-share-group-label"
+              value={selectedGroupId}
+              onChange={(e) => setSelectedGroupId(e.target.value)}
+              label="Выберите группу"
+            >
+              {userGroups.map((group) => (
+                <MenuItem key={group.id} value={group.id}>
+                  {group.name} {/* Отображаем название группы */}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeShareFolderModal}>Отмена</Button>
+          <Button onClick={confirmShareFolder} variant="contained" color="primary">
+            Поделиться
+          </Button>
+        </DialogActions>
+      </Dialog>
     </MainCard>
   );
 };

@@ -1,6 +1,6 @@
 // src/context/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, getIdTokenResult } from 'firebase/auth';
 
 const AuthContext = createContext();
 
@@ -9,7 +9,7 @@ export const useAuth = () => useContext(AuthContext);
 export function AuthProvider({ children }) {
   const auth = getAuth();
   const [currentUser, setCurrentUser] = useState(null);
-  const [token, setToken] = useState(null);
+  const [customClaims, setCustomClaims] = useState({});
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -17,14 +17,16 @@ export function AuthProvider({ children }) {
       setCurrentUser(user);
       if (user) {
         try {
-          const idToken = await user.getIdToken();
-          setToken(idToken);
+          // Принудительное обновление токена для получения последних customClaims
+          const tokenResult = await getIdTokenResult(user, true);
+          setCustomClaims(tokenResult.claims);
+          console.log('Custom Claims обновлены:', tokenResult.claims);
         } catch (error) {
-          console.error('Ошибка при получении токена:', error);
-          setToken(null);
+          console.error('Ошибка при получении customClaims:', error);
+          setCustomClaims({});
         }
       } else {
-        setToken(null);
+        setCustomClaims({});
       }
       setIsLoading(false);
     });
@@ -34,13 +36,9 @@ export function AuthProvider({ children }) {
 
   const value = {
     currentUser,
-    token,
-    isLoading,
+    customClaims,
+    isLoading
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {!isLoading && children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{!isLoading && children}</AuthContext.Provider>;
 }

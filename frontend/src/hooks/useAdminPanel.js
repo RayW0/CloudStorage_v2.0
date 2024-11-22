@@ -2,230 +2,285 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import {
-  getUsers,
-  getGroups,
-  assignRole,
-  assignGroup, // Функция для назначения нескольких групп
-  createGroup,
-  deleteGroup, // Добавлен импорт функции удаления группы
-  removeUserFromGroup,
-  deleteUser,
-  blockUser,
-  unblockUser
-} from '../api/adminApi';
+import { db } from '../firebaseConfig';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { toast } from 'react-toastify';
 
 const useAdminPanel = () => {
-  const { token, isLoading: authIsLoading } = useAuth();
+  const { customClaims, isLoading: authIsLoading } = useAuth();
   const [uid, setUid] = useState('');
-  const [role, setRole] = useState('');
-  const [groupId, setGroupId] = useState('');
   const [users, setUsers] = useState([]);
   const [groups, setGroups] = useState([]);
   const [newGroupName, setNewGroupName] = useState('');
   const [groupMembers, setGroupMembers] = useState([]);
+  const [selectedGroupId, setSelectedGroupId] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
+  // Функция для получения пользователей из Firestore
+  const fetchUsers = async () => {
+    try {
+      const usersCollection = collection(db, 'users');
+      const usersSnapshot = await getDocs(usersCollection);
+      const usersList = usersSnapshot.docs.map((doc) => ({ uid: doc.id, ...doc.data() }));
+      setUsers(usersList);
+      console.log('Пользователи загружены:', usersList);
+    } catch (error) {
+      console.error('Ошибка при получении пользователей:', error);
+      toast.error('Не удалось загрузить список пользователей');
+    }
+  };
+
+  // Функция для получения групп из Firestore
+  const fetchGroups = async () => {
+    try {
+      const groupsCollection = collection(db, 'groups');
+      const groupsSnapshot = await getDocs(groupsCollection);
+      const groupsList = groupsSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      setGroups(groupsList);
+      console.log('Группы загружены:', groupsList);
+    } catch (error) {
+      console.error('Ошибка при получении групп:', error);
+      toast.error('Не удалось загрузить список групп');
+    }
+  };
+
+  // Загрузка данных при монтировании хука
   useEffect(() => {
     const fetchData = async () => {
-      if (authIsLoading || !token) {
+      if (authIsLoading || !customClaims) {
         setIsLoading(true);
         return;
       }
 
+      // Проверка, что пользователь является администратором
+      if (!customClaims.admin) {
+        setIsLoading(false);
+        return;
+      }
+
       try {
-        const [fetchedUsers, fetchedGroups] = await Promise.all([getUsers(token), getGroups(token)]);
-        setUsers(Array.isArray(fetchedUsers) ? fetchedUsers : []);
-        setGroups(Array.isArray(fetchedGroups) ? fetchedGroups : []);
+        await Promise.all([fetchUsers(), fetchGroups()]);
       } catch (error) {
         console.error('Ошибка при загрузке данных:', error);
-        toast.error('Ошибка при загрузке данных');
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchData();
-  }, [token, authIsLoading]);
+  }, [customClaims, authIsLoading]);
 
-  const handleToggleMember = (groupId) => {
-    setGroupMembers((prevSelected) =>
-      prevSelected.includes(groupId) ? prevSelected.filter((id) => id !== groupId) : [...prevSelected, groupId]
-    );
-  };
-
-  const handleAssignRole = async () => {
-    if (!uid || !role) {
-      toast.error('Выберите пользователя и роль.');
-      return;
-    }
-
-    try {
-      await assignRole(token, uid, role);
-      setUsers((prevUsers) => prevUsers.map((user) => (user.uid === uid ? { ...user, role } : user)));
-      setUid('');
-      setRole('');
-      toast.success('Роль успешно назначена');
-    } catch (error) {
-      console.error('Ошибка при назначении роли:', error);
-      toast.error('Ошибка при назначении роли');
-    }
-  };
-
+  // Назначение групп пользователю
   const handleAssignGroups = async () => {
     if (!uid || groupMembers.length === 0) {
-      toast.error('Выберите пользователя и группы.');
+      toast.error('Выберите пользователя и группы для назначения');
       return;
     }
 
     try {
-      await assignGroup(token, uid, groupMembers); // Назначение нескольких групп
-      setUsers((prevUsers) =>
-        prevUsers.map((user) =>
-          user.uid === uid ? { ...user, groups: user.groups ? [...new Set([...user.groups, ...groupMembers])] : [...groupMembers] } : user
-        )
+      const userDocRef = doc(db, 'users', uid);
+      await updateDoc(userDocRef, {
+        groups: arrayUnion(...groupMembers)
+      });
+
+      // Обновление поля members в каждой назначенной группе
+      await Promise.all(
+        groupMembers.map(async (groupId) => {
+          const groupDocRef = doc(db, 'groups', groupId);
+          await updateDoc(groupDocRef, {
+            members: arrayUnion(uid)
+          });
+        })
       );
+
+      toast.success('Группы успешно назначены пользователю');
+      // Обновление списка пользователей и групп
+      await fetchUsers();
+      await fetchGroups();
+      // Сброс выбранных групп и пользователя
       setUid('');
-      setGroupId('');
       setGroupMembers([]);
-      toast.success('Группы успешно назначены пользователю.');
     } catch (error) {
       console.error('Ошибка при назначении групп:', error);
-      toast.error('Ошибка при назначении групп');
+      toast.error('Не удалось назначить группы пользователю');
     }
   };
 
+  // Создание новой группы
   const handleCreateGroup = async () => {
-    if (!newGroupName) {
-      toast.error('Введите название группы.');
+    if (!newGroupName.trim()) {
+      toast.error('Введите название группы');
       return;
     }
-
     if (groupMembers.length === 0) {
-      toast.error('Выберите хотя бы одного участника.');
+      toast.error('Выберите хотя бы одного участника');
       return;
     }
 
     try {
-      // Логирование перед отправкой запроса
-      console.log('Отправляем данные для создания группы:', { name: newGroupName, members: groupMembers });
-
-      const response = await createGroup(token, newGroupName, groupMembers);
-      console.log('Ответ сервера при создании группы:', response);
-
-      // Проверяем, что response содержит все необходимые поля
-      if (response && response.id && response.name && Array.isArray(response.members)) {
-        setGroups((prevGroups) => [...prevGroups, response]);
-        setNewGroupName('');
-        setGroupMembers([]);
-        toast.success('Группа успешно создана');
-      } else {
-        throw new Error('Некорректный ответ от сервера');
-      }
+      const newGroup = {
+        name: newGroupName,
+        members: groupMembers
+      };
+      const docRef = await addDoc(collection(db, 'groups'), newGroup);
+      toast.success('Группа успешно создана');
+      console.log('Группа создана с ID:', docRef.id);
+      // Обновление списка групп
+      await fetchGroups();
+      // Обновление поля groups у каждого участника группы
+      await Promise.all(
+        groupMembers.map(async (userId) => {
+          const userDocRef = doc(db, 'users', userId);
+          await updateDoc(userDocRef, {
+            groups: arrayUnion(docRef.id)
+          });
+        })
+      );
+      // Обновление списка пользователей после добавления групп
+      await fetchUsers();
+      // Сброс названия группы и выбранных участников
+      setNewGroupName('');
+      setGroupMembers([]);
     } catch (error) {
       console.error('Ошибка при создании группы:', error);
-      toast.error('Ошибка при создании группы');
+      toast.error('Не удалось создать группу');
     }
   };
 
+  // Удаление группы
   const handleDeleteGroup = async (id) => {
+    if (!id) return;
+
     try {
-      await deleteGroup(token, id); // Исправлено: вызываем функцию deleteGroup
-      setGroups((prevGroups) => prevGroups.filter((group) => group.id !== id));
+      await deleteDoc(doc(db, 'groups', id));
       toast.success('Группа успешно удалена');
+      // Обновление списка групп
+      await fetchGroups();
+      // Удаление группы из списка групп всех пользователей
+      const usersToUpdate = users.filter((user) => user.groups && user.groups.includes(id));
+      await Promise.all(
+        usersToUpdate.map(async (user) => {
+          const userDocRef = doc(db, 'users', user.uid);
+          await updateDoc(userDocRef, {
+            groups: arrayRemove(id)
+          });
+        })
+      );
+      await fetchUsers();
     } catch (error) {
       console.error('Ошибка при удалении группы:', error);
-      toast.error('Ошибка при удалении группы');
+      toast.error('Не удалось удалить группу');
     }
   };
 
+  // Удаление пользователя
   const handleDeleteUser = async () => {
     if (!uid) {
-      toast.error('Выберите пользователя для удаления.');
+      toast.error('Выберите пользователя для удаления');
       return;
     }
 
     try {
-      await deleteUser(token, uid);
-      setUsers((prevUsers) => prevUsers.filter((user) => user.uid !== uid));
-      setUid('');
+      // Удаление пользователя из всех групп
+      const user = users.find((user) => user.uid === uid);
+      if (user && user.groups && user.groups.length > 0) {
+        await Promise.all(
+          user.groups.map(async (groupId) => {
+            const groupDocRef = doc(db, 'groups', groupId);
+            await updateDoc(groupDocRef, {
+              members: arrayRemove(uid)
+            });
+          })
+        );
+      }
+
+      // Удаление пользователя из коллекции 'users'
+      await deleteDoc(doc(db, 'users', uid));
       toast.success('Пользователь успешно удален');
+      // Обновление списка пользователей
+      await fetchUsers();
+      setUid('');
     } catch (error) {
       console.error('Ошибка при удалении пользователя:', error);
-      toast.error('Ошибка при удалении пользователя');
+      toast.error('Не удалось удалить пользователя');
     }
   };
 
+  // Блокировка пользователя
   const handleBlockUser = async () => {
     if (!uid) {
-      toast.error('Выберите пользователя для блокировки.');
+      toast.error('Выберите пользователя для блокировки');
       return;
     }
 
     try {
-      await blockUser(token, uid);
-      setUsers((prevUsers) => prevUsers.map((user) => (user.uid === uid ? { ...user, isBlocked: true } : user)));
-      setUid('');
+      const userDocRef = doc(db, 'users', uid);
+      await updateDoc(userDocRef, { blocked: true });
       toast.success('Пользователь успешно заблокирован');
+      // Обновление списка пользователей
+      await fetchUsers();
+      setUid('');
     } catch (error) {
       console.error('Ошибка при блокировке пользователя:', error);
-      toast.error('Ошибка при блокировке пользователя');
+      toast.error('Не удалось заблокировать пользователя');
     }
   };
 
+  // Разблокировка пользователя
   const handleUnblockUser = async () => {
     if (!uid) {
-      toast.error('Выберите пользователя для разблокировки.');
+      toast.error('Выберите пользователя для разблокировки');
       return;
     }
 
     try {
-      await unblockUser(token, uid);
-      setUsers((prevUsers) => prevUsers.map((user) => (user.uid === uid ? { ...user, isBlocked: false } : user)));
-      setUid('');
+      const userDocRef = doc(db, 'users', uid);
+      await updateDoc(userDocRef, { blocked: false });
       toast.success('Пользователь успешно разблокирован');
+      // Обновление списка пользователей
+      await fetchUsers();
+      setUid('');
     } catch (error) {
       console.error('Ошибка при разблокировке пользователя:', error);
-      toast.error('Ошибка при разблокировке пользователя');
+      toast.error('Не удалось разблокировать пользователя');
     }
   };
 
-  // Новая функция для удаления пользователя из группы
+  // Удаление пользователя из группы
   const handleRemoveUserFromGroup = async (groupId, userId) => {
     try {
-      await removeUserFromGroup(token, groupId, userId);
-      setGroups((prevGroups) =>
-        prevGroups.map((group) => (group.id === groupId ? { ...group, members: group.members.filter((id) => id !== userId) } : group))
-      );
-      setUsers((prevUsers) =>
-        prevUsers.map((user) =>
-          user.uid === userId ? { ...user, groups: user.groups ? user.groups.filter((id) => id !== groupId) : [] } : user
-        )
-      );
+      const groupDocRef = doc(db, 'groups', groupId);
+      await updateDoc(groupDocRef, {
+        members: arrayRemove(userId)
+      });
+
+      const userDocRef = doc(db, 'users', userId);
+      await updateDoc(userDocRef, {
+        groups: arrayRemove(groupId)
+      });
+
       toast.success('Пользователь успешно удален из группы');
+      // Обновление списков пользователей и групп
+      await fetchUsers();
+      await fetchGroups();
     } catch (error) {
       console.error('Ошибка при удалении пользователя из группы:', error);
-      toast.error('Ошибка при удалении пользователя из группы');
+      toast.error('Не удалось удалить пользователя из группы');
     }
   };
 
   return {
     uid,
     setUid,
-    role,
-    setRole,
-    groupId,
-    setGroupId,
     users,
     groups,
     newGroupName,
     setNewGroupName,
     groupMembers,
     setGroupMembers,
-    handleToggleMember,
+    selectedGroupId,
+    setSelectedGroupId,
     isLoading,
-    handleAssignRole,
     handleAssignGroups,
     handleCreateGroup,
     handleDeleteGroup,

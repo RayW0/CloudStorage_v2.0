@@ -1,7 +1,7 @@
 // assignAdmin.js
 
-const admin = require('firebase-admin');
-const serviceAccount = require('./firebaseServiceAccount.json'); // Убедитесь, что путь корректен
+const admin = require("firebase-admin");
+const serviceAccount = require("./firebaseServiceAccount.json"); // Убедитесь, что путь корректен
 
 // Инициализация Firebase Admin SDK
 admin.initializeApp({
@@ -15,12 +15,14 @@ async function setAdminRole(uid) {
     await admin.auth().setCustomUserClaims(uid, { admin: true });
 
     // Обновляем документ пользователя в Firestore (если необходимо)
-    const userRef = admin.firestore().collection('users').doc(uid);
-    await userRef.update({ role: 'admin' });
+    const userRef = admin.firestore().collection("users").doc(uid);
+    await userRef.update({ admin: true });
 
-    console.log(`Роль администратора успешно назначена пользователю с UID: ${uid}`);
+    console.log(
+      `Роль администратора успешно назначена пользователю с UID: ${uid}`
+    );
   } catch (error) {
-    console.error('Ошибка при назначении роли администратора:', error);
+    console.error("Ошибка при назначении роли администратора:", error);
   }
 }
 
@@ -28,7 +30,7 @@ async function setAdminRole(uid) {
 const uid = process.argv[2];
 
 if (!uid) {
-  console.error('Пожалуйста, укажите UID пользователя в качестве аргумента.');
+  console.error("Пожалуйста, укажите UID пользователя в качестве аргумента.");
   process.exit(1);
 }
 

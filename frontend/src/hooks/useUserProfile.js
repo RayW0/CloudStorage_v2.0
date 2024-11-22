@@ -10,7 +10,6 @@ export default function useUserProfile() {
   const [userName, setUserName] = useState('Гость');
   const [userEmail, setUserEmail] = useState('');
   const [userStatus, setUserStatus] = useState('Не в сети');
-  const [userRole, setUserRole] = useState('Гость');
   const [userPosition, setUserPosition] = useState('');
   const [profilePic, setProfilePic] = useState('');
   const [userBio, setUserBio] = useState('');
@@ -27,16 +26,6 @@ export default function useUserProfile() {
       if (user) {
         setUserName(user.displayName || 'Гость');
         setUserEmail(user.email || '');
-
-        // Получение кастомных утверждений для роли
-        user
-          .getIdTokenResult(true)
-          .then((idTokenResult) => {
-            setUserRole(idTokenResult.claims.admin ? 'admin' : 'user');
-          })
-          .catch((error) => {
-            console.error('Ошибка при получении ID токена:', error);
-          });
 
         // Подписка на документ пользователя для реального времени
         const userDocRef = doc(db, 'users', user.uid);
@@ -107,7 +96,6 @@ export default function useUserProfile() {
         // Если пользователь не аутентифицирован, сбросить все состояния
         setUserName('Гость');
         setUserEmail('');
-        setUserRole('Гость');
         setUserPosition('');
         setProfilePic('');
         setUserBio('');
@@ -128,7 +116,6 @@ export default function useUserProfile() {
     userName,
     userEmail,
     userStatus,
-    userRole,
     userPosition,
     profilePic,
     userBio,

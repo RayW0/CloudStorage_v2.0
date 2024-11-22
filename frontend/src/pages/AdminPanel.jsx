@@ -22,32 +22,26 @@ import {
 } from '@mui/material';
 import useAdminPanel from 'hooks/useAdminPanel';
 import { ToastContainer } from 'react-toastify';
+import CheckAdmin from 'components/CheckAdmin';
 import 'react-toastify/dist/ReactToastify.css';
 
 const AdminPanel = () => {
   const {
     uid,
     setUid,
-    role,
-    setRole,
-    groupId,
-    setGroupId,
     users,
     groups,
     newGroupName,
     setNewGroupName,
     groupMembers,
     setGroupMembers,
-    handleToggleMember,
     isLoading,
-    handleAssignRole,
     handleAssignGroups,
     handleCreateGroup,
     handleDeleteGroup,
     handleDeleteUser,
     handleBlockUser,
-    handleUnblockUser,
-    handleRemoveUserFromGroup
+    handleUnblockUser
   } = useAdminPanel();
 
   const [selectedGroups, setSelectedGroups] = useState([]);
@@ -67,7 +61,7 @@ const AdminPanel = () => {
         <Typography variant="h4" gutterBottom align="center">
           Админ панель
         </Typography>
-
+        <CheckAdmin />
         {/* Назначение групп пользователю */}
         <FormControl fullWidth sx={{ mb: 3 }}>
           <InputLabel id="assign-groups-label">Выберите группы</InputLabel>

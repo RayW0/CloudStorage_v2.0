@@ -83,24 +83,6 @@ export const createGroup = async (token, groupName, members) => {
 };
 
 /**
- * Назначает роль пользователю.
- * @param {string} token - Токен аутентификации.
- * @param {string} userId - Идентификатор пользователя.
- * @param {string} role - Название роли.
- */
-export const assignRole = async (token, userId, role) => {
-  try {
-    const userDocRef = doc(db, 'users', userId);
-    await updateDoc(userDocRef, {
-      role: role
-    });
-    return { success: true };
-  } catch (error) {
-    throw error;
-  }
-};
-
-/**
  * Получает всех пользователей.
  * @param {string} token - Токен аутентификации.
  */

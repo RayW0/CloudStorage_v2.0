@@ -67,7 +67,7 @@ const useRegister = (navigate) => {
           displayName,
           email,
           status: 'online', // Рассмотрите возможность изменения на 'offline' или другой статус по умолчанию
-          role: 'user',
+          admin: false,
           groups: [DEFAULT_GROUP_ID], // Использование ID группы вместо названия
           isEmailVerified: false,
           createdAt: new Date().toISOString(),

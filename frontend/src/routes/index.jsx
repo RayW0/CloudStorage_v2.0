@@ -8,6 +8,8 @@ import UserMenuRoutes from './UserMenuRoutes';
 
 // ==============================|| ROUTING RENDER ||============================== //
 
-const router = createBrowserRouter([ MainRoutes, LoginRoutes, FilesRoutes, UserMenuRoutes], { basename: import.meta.env.VITE_APP_BASE_NAME });
+const router = createBrowserRouter([MainRoutes, LoginRoutes, FilesRoutes, UserMenuRoutes], {
+  basename: import.meta.env.VITE_APP_BASE_NAME
+});
 
 export default router;
