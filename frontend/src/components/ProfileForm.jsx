@@ -1,6 +1,6 @@
 // components/ProfileForm.jsx
 import React from 'react';
-import { TextField, Button, Stack, Avatar, Grid, Chip, Typography } from '@mui/material';
+import { TextField, Button, Stack, Avatar, Grid, Chip, Typography, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
 import { UploadOutlined } from '@ant-design/icons';
 
 const ProfileForm = ({
@@ -12,8 +12,14 @@ const ProfileForm = ({
   handleFileChange,
   handleSaveClick,
   handleCancel,
-  handleEdit
+  handleEdit,
+  handleResetPassword // Новый пропс для восстановления пароля
 }) => {
+  const [resetDialogOpen, setResetDialogOpen] = React.useState(false);
+
+  const openResetDialog = () => setResetDialogOpen(true);
+  const closeResetDialog = () => setResetDialogOpen(false);
+
   return (
     <Grid container spacing={6} justifyContent="start" alignItems="center">
       {/* Левая колонка: Аватар и загрузка фото */}
@@ -104,7 +110,7 @@ const ProfileForm = ({
             )}
           </Stack>
 
-          {/* Кнопки редактирования и сохранения */}
+          {/* Кнопки редактирования, сохранения и восстановления пароля */}
           <Stack direction="row" spacing={2}>
             {editing ? (
               <>
@@ -116,13 +122,36 @@ const ProfileForm = ({
                 </Button>
               </>
             ) : (
-              <Button variant="contained" color="primary" onClick={handleEdit}>
-                Редактировать
-              </Button>
+              <>
+                <Button variant="contained" color="primary" onClick={handleEdit}>
+                  Редактировать
+                </Button>
+                <Button variant="outlined" color="secondary" onClick={openResetDialog}>
+                  Восстановить пароль
+                </Button>
+              </>
             )}
           </Stack>
         </Stack>
       </Grid>
+
+      {/* Диалог восстановления пароля */}
+      <Dialog open={resetDialogOpen} onClose={closeResetDialog}>
+        <DialogTitle>Восстановление пароля</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            На ваш email будет отправлена ссылка для восстановления пароля. Продолжить?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeResetDialog} color="secondary">
+            Отмена
+          </Button>
+          <Button onClick={handleResetPassword} color="primary">
+            Отправить
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Grid>
   );
 };

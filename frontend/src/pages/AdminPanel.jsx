@@ -61,7 +61,6 @@ const AdminPanel = () => {
         <Typography variant="h4" gutterBottom align="center">
           Админ панель
         </Typography>
-        <CheckAdmin />
         {/* Назначение групп пользователю */}
         <FormControl fullWidth sx={{ mb: 3 }}>
           <InputLabel id="assign-groups-label">Выберите группы</InputLabel>

@@ -182,7 +182,7 @@ export default function AuthLogin({ isDemo = false }) {
                   }
                   label={<Typography variant="h6">Оставаться в системе</Typography>}
                 />
-                <Link variant="h6" component={RouterLink} color="text.primary" to="/forgot-password">
+                <Link variant="h6" component={RouterLink} color="primary" to="/forgot-password">
                   Забыли пароль?
                 </Link>
               </Stack>

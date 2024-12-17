@@ -102,7 +102,7 @@ export default function DashboardDefault() {
         <Grid item xs={12} sm={6} md={3}>
           <DashboardWidget
             title="Пользователи"
-            value={ userCount }
+            value={ 2 }
             icon={<PermIdentityIcon />}
             link="/#"
           />

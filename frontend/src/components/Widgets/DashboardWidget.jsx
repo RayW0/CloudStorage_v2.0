@@ -100,9 +100,9 @@ export default function DashboardWidget({ title, value, icon, change, link, extr
                 <Typography
                   variant="body
                 2"
-                  sx={{ mt: 1, color: theme.palette.text.secondary }}
+                  sx={{ mt: 1, color: theme.palette.primary.main, fontWeight: 'bold' }}
                 >
-                  Завершено: {progress}%
+                  Занято: {progress}%
                 </Typography>
               </Box>
             )}
@@ -112,8 +112,8 @@ export default function DashboardWidget({ title, value, icon, change, link, extr
           <Button
             size="small"
             sx={{
-              color: theme.palette.primary.main,
-              borderColor: theme.palette.primary.main,
+              color: theme.palette.common.white,
+              borderColor: theme.palette.common.white,
               '&:hover': {
                 backgroundColor: 'rgba(0, 0, 255, 0.05)'
               }

@@ -1,5 +1,3 @@
-// src/pages/files/Trash.jsx
-
 import React, { useEffect, useState, useCallback } from 'react';
 import { Typography, Stack, Divider, Checkbox, Button, CircularProgress, IconButton, Tooltip, Grid, Box } from '@mui/material';
 import RestoreFromTrashOutlinedIcon from '@mui/icons-material/RestoreFromTrashOutlined';

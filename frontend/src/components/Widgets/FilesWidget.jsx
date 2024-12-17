@@ -66,11 +66,11 @@ export default function LatestFilesWidget({ files, loading, link }) {
                         secondary={`Загружен: ${new Date(file.last_modified).toLocaleDateString()}`}
                         primaryTypographyProps={{
                           variant: 'body1',
-                          sx: { color: theme.palette.text.secondary }
+                          sx: { color: theme.palette.text }
                         }}
                         secondaryTypographyProps={{
                           variant: 'caption',
-                          sx: { color: theme.palette.text.disabled }
+                          sx: { color: theme.palette.text }
                         }}
                       />
                     </ListItem>

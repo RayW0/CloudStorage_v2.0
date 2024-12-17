@@ -61,7 +61,7 @@ function StatusButton({ initialStatus = 'Оффлайн', onStatusChange }) {
         variant="contained"
         onClick={handleClick}
         sx={{
-          backgroundColor: '#E1F5FE',
+          background: 'linear-gradient(135deg, #e7f0fa, #72b9f6, #7593d6)',
           color: 'black',
           textTransform: 'none',
           padding: '8px 12px',
@@ -69,7 +69,7 @@ function StatusButton({ initialStatus = 'Оффлайн', onStatusChange }) {
           width: 'fit-content',
           boxShadow: 'none',
           '&:hover': {
-            backgroundColor: '#B3E5FC',
+            background: 'linear-gradient(135deg, #42a5f5, #7688ce)',
             boxShadow: 'none',
           },
         }}
@@ -86,7 +86,7 @@ function StatusButton({ initialStatus = 'Оффлайн', onStatusChange }) {
           >
             <CircleIcon sx={{ color: currentStatus.color, fontSize: 16 }} />
           </motion.div>
-          <Typography variant="body1">{currentStatus.label}</Typography>
+          <Typography variant="h5" color="white">{currentStatus.label}</Typography>
         </Box>
       </Button>
 
