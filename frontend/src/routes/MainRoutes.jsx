@@ -5,6 +5,7 @@ import Loadable from 'components/Loadable';
 import Dashboard from 'layout/Dashboard';
 import AdminPanel from 'pages/AdminPanel';
 import AdminRoute from 'routes/AdminRoute';
+import NotAuthorized from 'pages/NotAuthorized';
 
 const DashboardDefault = Loadable(lazy(() => import('pages/dashboard/index')));
 
@@ -37,6 +38,10 @@ const MainRoutes = {
           <AdminPanel />
         </AdminRoute>
       )
+    },
+    {
+      path: 'not-authorized',
+      element: <NotAuthorized />
     }
   ]
 };
